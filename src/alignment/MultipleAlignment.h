@@ -64,7 +64,7 @@ private:
 
     std::vector<Matcher::result_t> computeBacktrace(Sequence *centerSeq, const std::vector<Sequence *> &sequences);
 
-    void computeQueryGaps(unsigned int *queryGaps, Sequence *centerSeq, const std::vector<Sequence *> &seqs, const std::vector<Matcher::result_t> &alignmentResults);
+    void computeQueryGaps(unsigned int *queryGaps, Sequence *centerSeq, const std::vector<Matcher::result_t> &alignmentResults);
 
     size_t updateGapsInCenterSequence(char **msaSequence, Sequence *centerSeq, bool noDeletionMSA);
 

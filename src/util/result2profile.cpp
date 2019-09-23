@@ -264,8 +264,8 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
             result.clear();
 
             MultipleAlignment::deleteMSA(&res);
-            for (std::vector<Sequence *>::iterator it = seqSet.begin(); it != seqSet.end(); ++it) {
-                delete *it;
+            for (Sequence *seq : seqSet) {
+                delete seq;
             }
             seqSet.clear();
         }

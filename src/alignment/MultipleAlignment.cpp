@@ -63,11 +63,10 @@ std::vector<Matcher::result_t> MultipleAlignment::computeBacktrace(Sequence *cen
     return btSequences;
 }
 
-void MultipleAlignment::computeQueryGaps(unsigned int *queryGaps, Sequence *centerSeq, const std::vector<Sequence *>& seqs, const std::vector<Matcher::result_t>& alignmentResults) {
+void MultipleAlignment::computeQueryGaps(unsigned int *queryGaps, Sequence *centerSeq, const std::vector<Matcher::result_t> &alignmentResults) {
     // init query gaps
     memset(queryGaps, 0, sizeof(unsigned int) * centerSeq->L);
-    for(size_t i = 0; i < seqs.size(); i++) {
-        const Matcher::result_t& alignment = alignmentResults[i];
+    for (const Matcher::result_t &alignment : alignmentResults) {
         std::string bt = alignment.backtrace;
         size_t queryPos = 0;
         size_t targetPos = 0;
@@ -75,8 +74,7 @@ void MultipleAlignment::computeQueryGaps(unsigned int *queryGaps, Sequence *cent
         queryPos = alignment.qStartPos;
         targetPos = alignment.dbStartPos;
         // compute query gaps (deletions)
-        for (size_t pos = 0; pos < bt.size(); ++pos) {
-            char bt_letter = bt.at(pos);
+        for (const char bt_letter : bt) {
             if (bt_letter == 'M') { // match state
                 ++queryPos;
                 ++targetPos;
@@ -233,7 +231,7 @@ MultipleAlignment::MSAResult MultipleAlignment::computeMSA(Sequence *centerSeq, 
         msaSequence[i] = initX(noDeletionMSA ? centerSeq->L + 1: maxSeqLen + 1);
     }
 
-    computeQueryGaps(queryGaps, centerSeq, edgeSeqs, alignmentResults);
+    computeQueryGaps(queryGaps, centerSeq, alignmentResults);
     // process gaps in Query (update sequences)
     // and write query Alignment at position 0
 	

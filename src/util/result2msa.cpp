@@ -330,8 +330,8 @@ int result2msa(int argc, const char **argv, const Command &command) {
             result.clear();
 
             MultipleAlignment::deleteMSA(&res);
-            for (std::vector<Sequence *>::iterator it = seqSet.begin(); it != seqSet.end(); ++it) {
-                delete *it;
+            for (Sequence *seq : seqSet) {
+                delete seq;
             }
             seqSet.clear();
         }
