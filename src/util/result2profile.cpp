@@ -130,7 +130,7 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
 
         Matcher matcher(qDbr->getDbtype(), maxSequenceLength, &subMat, &evalueComputation, par.compBiasCorrection, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
         MultipleAlignment aligner(maxSequenceLength, maxSetSize, &subMat, &matcher);
-        PSSMCalculator calculator(&subMat, maxSequenceLength, maxSetSize, par.pca, par.pcb);
+        PSSMCalculator calculator(&subMat, maxSequenceLength, maxSetSize, par.pca, par.pcb, par.gapOpen.aminoacids, par.gapPseudoCount);
         MsaFilter filter(maxSequenceLength, maxSetSize, &subMat, par.gapOpen.aminoacids, par.gapExtend.aminoacids);
         Sequence centerSequence(maxSequenceLength, qDbr->getDbtype(), &subMat, 0, false, par.compBiasCorrection);
 
@@ -223,7 +223,8 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
                     }
                 }
 
-                PSSMCalculator::Profile pssmRes = calculator.computePSSMFromMSA(filteredSetSize, res.centerLength, (const char **) res.msaSequence, par.wg);
+                PSSMCalculator::Profile pssmRes = calculator.computePSSMFromMSA(filteredSetSize, res.centerLength,
+                                                                                (const char **) res.msaSequence, res.alignmentResults, par.wg);
                 if (par.maskProfile == true) {
                     for (int i = 0; i < centerSequence.L; ++i) {
                         charSequence[i] = (unsigned char) centerSequence.numSequence[i];
@@ -258,6 +259,10 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
                     result.push_back(static_cast<unsigned char>(subMat.aa2num[static_cast<int>(pssmRes.consensus[pos])]));
                     unsigned char neff = MathUtil::convertNeffToChar(pssmRes.neffM[pos]);
                     result.push_back(neff);
+                    result.push_back(static_cast<unsigned char>(pssmRes.gDelOpen[pos]));
+                    result.push_back(static_cast<unsigned char>(pssmRes.gDelClose[pos]));
+                    result.push_back(static_cast<unsigned char>(pssmRes.gIns[pos]));
+                    result.push_back(static_cast<unsigned char>(pssmRes.gapFraction[pos] * 255));
                 }
             }
             resultWriter.writeData(result.c_str(), result.length(), queryKey, thread_idx);

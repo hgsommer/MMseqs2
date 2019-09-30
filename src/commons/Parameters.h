@@ -380,6 +380,7 @@ public:
     bool   realign;                      // realign hit with more conservative score
     MultiParam<int> gapOpen;             // gap open cost
     MultiParam<int> gapExtend;           // gap extension cost
+    int    gapPseudoCount;               // for calculation of position-specific gap opening penalties
     int    zdrop;                        // zdrop
 
     // workflow
@@ -689,6 +690,7 @@ public:
     PARAMETER(PARAM_ALT_ALIGNMENT)
     PARAMETER(PARAM_GAP_OPEN)
     PARAMETER(PARAM_GAP_EXTEND)
+    PARAMETER(PARAM_GAP_PSEUDOCOUNT)
     PARAMETER(PARAM_ZDROP)
 
     // clustering

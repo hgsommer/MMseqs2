@@ -129,7 +129,7 @@ int msa2profile(int argc, const char **argv, const Command &command) {
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
 
-        PSSMCalculator calculator(&subMat, maxSeqLength + 1, maxSetSize, par.pca, par.pcb);
+        PSSMCalculator calculator(&subMat, maxSeqLength + 1, maxSetSize, par.pca, par.pcb, par.gapOpen.aminoacids, par.gapPseudoCount);
         Sequence sequence(maxSeqLength + 1, Parameters::DBTYPE_AMINO_ACIDS, &subMat, 0, false, par.compBiasCorrection != 0);
 
         char *msaContent = (char*) mem_align(ALIGN_INT, sizeof(char) * (maxSeqLength + 1) * maxSetSize);
@@ -334,6 +334,10 @@ int msa2profile(int argc, const char **argv, const Command &command) {
                 result.push_back(static_cast<unsigned char>(msaSequences[0][pos]));
                 result.push_back(subMat.aa2num[static_cast<int>(pssmRes.consensus[pos])]);
                 result += MathUtil::convertNeffToChar(pssmRes.neffM[pos]);
+                result.push_back(static_cast<unsigned char>(pssmRes.gDelOpen[pos]));
+                result.push_back(static_cast<unsigned char>(pssmRes.gDelClose[pos]));
+                result.push_back(static_cast<unsigned char>(pssmRes.gIns[pos]));
+                result.push_back(static_cast<unsigned char>(pssmRes.gapFraction[pos] * 255));
             }
 
             if (mode & DBReader<unsigned int>::USE_LOOKUP) {
