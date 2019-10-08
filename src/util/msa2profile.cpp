@@ -16,8 +16,14 @@ KSEQ_INIT(kseq_buffer_t*, kseq_buffer_reader)
 #include <omp.h>
 #endif
 
+enum {
+    MSA_CA3M = 0,
+    MSA_A3M  = 1,
+    MSA_STOCKHOLM = 2
+};
+
 void setMsa2ProfileDefaults(Parameters *p) {
-    p->msaType = 2;
+    p->msaType = MSA_STOCKHOLM;
     p->pca = 0.0;
 }
 
@@ -166,10 +172,11 @@ int msa2profile(int argc, const char **argv, const Command &command) {
             size_t entryLength = qDbr.getEntryLen(id);
 
             std::string msa;
-            if (par.msaType == 0) {
+            if (par.msaType == MSA_CA3M) {
                 msa = CompressedA3M::extractA3M(entryData, entryLength - 2, *sequenceReader, *headerReader, thread_idx);
                 d.buffer = const_cast<char*>(msa.c_str());
                 d.length = msa.length();
+                par.msaType = MSA_A3M;
             } else {
                 d.buffer = entryData;
                 d.length = entryLength - 1;
@@ -241,7 +248,7 @@ int msa2profile(int argc, const char **argv, const Command &command) {
                     }
 
                     // skip a3m lower letters
-                    if (par.msaType == 1 && islower(seq->seq.s[i])) {
+                    if (par.msaType == MSA_A3M && islower(seq->seq.s[i])) {
                         continue;
                     }
 
