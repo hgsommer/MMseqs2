@@ -1,3 +1,4 @@
+#include "Matcher.h"
 #include "MsaFilter.h"
 #include "Parameters.h"
 #include "PSSMCalculator.h"
@@ -149,6 +150,8 @@ int msa2profile(int argc, const char **argv, const Command &command) {
         kseq_t *seq = kseq_init(&d);
 
         char **msaSequences = (char**) mem_align(ALIGN_INT, sizeof(char*) * maxSetSize);
+        std::vector<Matcher::result_t> alnResults;
+        alnResults.reserve(maxSetSize);
 
         const bool maskByFirst = par.matchMode == 0;
         const float matchRatio = par.matchRatio;
@@ -172,6 +175,7 @@ int msa2profile(int argc, const char **argv, const Command &command) {
             size_t entryLength = qDbr.getEntryLen(id);
 
             std::string msa;
+            std::string backtrace;
             if (par.msaType == MSA_CA3M) {
                 msa = CompressedA3M::extractA3M(entryData, entryLength - 2, *sequenceReader, *headerReader, thread_idx);
                 d.buffer = const_cast<char*>(msa.c_str());
@@ -218,6 +222,7 @@ int msa2profile(int argc, const char **argv, const Command &command) {
                 // first sequence is always the query
                 if (setSize == 0) {
                     centerLengthWithGaps = seq->seq.l;
+                    backtrace.reserve(centerLengthWithGaps);
                     if (maskByFirst == true) {
                         for (size_t i = 0; i < centerLengthWithGaps; ++i) {
                             if (seq->seq.s[i] == '-') {
@@ -253,6 +258,28 @@ int msa2profile(int argc, const char **argv, const Command &command) {
                     }
 
                     msaContent[msaPos++] = (seq->seq.s[i] == '-') ? (int)MultipleAlignment::GAP : sequence.numSequence[i];
+                }
+
+                // construct backtrace for all but the query sequence
+                if (setSize > 0) {
+                    backtrace.clear();
+                    for (size_t i = 0; i < centerLengthWithGaps; ++i) {
+                        bool isMaskedColumn = (maskByFirst && maskedColumns[i]);
+                        if (seq->seq.s[i] == '-' && isMaskedColumn) {
+                            continue;
+                        }
+                        if (seq->seq.s[i] == '-') {
+                            backtrace.push_back('I');
+                        }
+                        else if (isMaskedColumn || (!maskByFirst && msaSequences[0][i] == MultipleAlignment::GAP)
+                                                || (par.msaType == MSA_A3M && islower(seq->seq.s[i]))) {
+                            backtrace.push_back('D');
+                        }
+                        else {
+                            backtrace.push_back('M');
+                        }
+                    }
+                    alnResults.emplace_back(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, backtrace);
                 }
 
                 // fill up the sequence buffer for the SIMD profile calculation
@@ -319,20 +346,41 @@ int msa2profile(int argc, const char **argv, const Command &command) {
                         msaSequences[k][l] = MultipleAlignment::GAP;
                     }
                 }
+
+                // update backtraces
+                // TODO: check if this works for a3m as well (probably not...)
+                for (unsigned int k = 0; k < setSize - 1; ++k) {
+                    std::string::iterator readIt = alnResults[k].backtrace.begin();
+                    std::string::iterator writeIt = readIt;
+                    for (unsigned int l = 0; l < centerLengthWithGaps; ++l) {
+                        if (!maskedColumns[l]) {
+                            *writeIt = *readIt;
+                            ++readIt;
+                            ++writeIt;
+                        } else {
+                            if (*readIt == 'D') {
+                                *writeIt = 'D';
+                                ++writeIt;
+                            }
+                            ++readIt;
+                        }
+                    }
+                    alnResults[k].backtrace.erase(writeIt, alnResults[k].backtrace.end());
+                }
             }
             unsigned int centerLength = centerLengthWithGaps - maskedCount;
 
+            MultipleAlignment::MSAResult msaResult(centerLength, centerLength, setSize, msaSequences, alnResults);
             size_t filteredSetSize = setSize;
             if (par.filterMsa == 1) {
-                filteredSetSize = filter.filter(setSize, centerLength, static_cast<int>(par.covMSAThr * 100),
-                              static_cast<int>(par.qid * 100), par.qsc,
-                              static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff,
-                              (const char **) msaSequences, true);
+                filteredSetSize = filter.filter(msaResult, static_cast<int>(par.covMSAThr * 100),
+                                                static_cast<int>(par.qid * 100), par.qsc,
+                                                static_cast<int>(par.filterMaxSeqId * 100), par.Ndiff);
             }
 
             PSSMCalculator::Profile pssmRes =
-                    calculator.computePSSMFromMSA(filteredSetSize, centerLength,
-                                                  (const char **) msaSequences, par.wg);
+                    calculator.computePSSMFromMSA(filteredSetSize, msaResult.centerLength,
+                                                  (const char **) msaResult.msaSequence, msaResult.alignmentResults, par.wg);
             for(size_t pos = 0; pos < centerLength; pos++){
                 for (size_t aa = 0; aa < Sequence::PROFILE_AA_SIZE; aa++) {
                     result.push_back(Sequence::scoreMask(pssmRes.prob[pos*Sequence::PROFILE_AA_SIZE + aa]));
