@@ -201,6 +201,21 @@ private:
         simd_int* profile_word;	// 0: none
         simd_int* profile_rev_byte;	// 0: none
         simd_int* profile_rev_word;	// 0: none
+        simd_int* profile_gDelOpen_byte;
+        simd_int* profile_gDelOpen_word;
+        simd_int* profile_gDelClose_byte;
+        simd_int* profile_gDelClose_word;
+        simd_int* profile_gIns_byte;
+        simd_int* profile_gIns_word;
+        simd_int* profile_gDelOpen_rev_byte;
+        simd_int* profile_gDelOpen_rev_word;
+        simd_int* profile_gDelClose_rev_byte;
+        simd_int* profile_gDelClose_rev_word;
+        simd_int* profile_gIns_rev_byte;
+        simd_int* profile_gIns_rev_word;
+        int8_t* gDelOpen_rev;
+        int8_t* gDelClose_rev;
+        int8_t* gIns_rev;
         int8_t* query_sequence;
         int8_t* query_rev_sequence;
         int8_t* composition_bias;
@@ -250,6 +265,7 @@ private:
      wight_match > 0, all other weights < 0.
      The returned positions are 0-based.
      */
+    template <const unsigned int type>
     std::pair<alignment_end, alignment_end> sw_sse2_byte (const unsigned char*db_sequence,
                                  int8_t ref_dir,	// 0: forward ref; 1: reverse ref
                                  int32_t db_length,
@@ -257,6 +273,9 @@ private:
                                  const uint8_t gap_open, /* will be used as - */
                                  const uint8_t gap_extend, /* will be used as - */
                                  const simd_int* query_profile_byte,
+                                 const simd_int* gap_open_del,
+                                 const simd_int* gap_close_del,
+                                 const simd_int* gap_open_ins,
                                  uint8_t terminate,	/* the best alignment score: used to terminate
                                                      the matrix calculation when locating the
                                                      alignment beginning point. If this score
@@ -264,6 +283,7 @@ private:
                                  uint8_t bias,  /* Shift 0 point to a positive value. */
                                  int32_t maskLen);
 
+    template <const unsigned int type>
     std::pair<alignment_end, alignment_end> sw_sse2_word (const unsigned char* db_sequence,
                                  int8_t ref_dir,	// 0: forward ref; 1: reverse ref
                                  int32_t db_length,
@@ -271,6 +291,9 @@ private:
                                  const uint8_t gap_open, /* will be used as - */
                                  const uint8_t gap_extend, /* will be used as - */
                                  const simd_int*query_profile_byte,
+                                 const simd_int* gap_open_del,
+                                 const simd_int* gap_close_del,
+                                 const simd_int* gap_open_ins,
                                  uint16_t terminate,
                                  int32_t maskLen);
 
