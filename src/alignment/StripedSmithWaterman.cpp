@@ -781,6 +781,15 @@ void SmithWaterman::ssw_init(const Sequence* q,
 	// create reverse structures
 	seq_reverse( profile->query_rev_sequence, profile->query_sequence, q->L);
 	seq_reverse( profile->composition_bias_rev, profile->composition_bias, q->L);
+	printf("forward: ");
+	for (int i = 0; i <q->L; ++i) {
+	    printf("%c",  q->subMat->num2aa[profile->query_sequence[i]]);
+	}
+	printf("\nreverse: ");
+    for (int i = 0; i <q->L; ++i) {
+        printf("%c", q->subMat->num2aa[profile->query_rev_sequence[i]]);
+    }
+    printf("\n");
 
 	if (isProfile) {
 		for (int32_t i = 0; i < alphabetSize; i++) {
