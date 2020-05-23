@@ -305,8 +305,13 @@ s_align SmithWaterman::ssw_align (
         }
 	}
 	if(bests_reverse.first.score != r.score1){
-		fprintf(stderr, "Score of forward/backward SW differ. This should not happen.\n");
-		EXIT(EXIT_FAILURE);
+        fprintf(stderr, "Score of forward/backward SW differ: %d %d. This should not happen.\n", r.score1, bests_reverse.first.score);
+        if (!isProfile) {
+            EXIT(EXIT_FAILURE);
+        }
+	}
+	else if (isProfile) {
+        fprintf(stderr, "forward/backward score matches: %d.\n", r.score1);
 	}
 
 	r.dbStartPos1 = bests_reverse.first.ref;
