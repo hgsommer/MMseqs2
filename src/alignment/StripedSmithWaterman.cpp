@@ -907,18 +907,18 @@ void SmithWaterman::ssw_init(const Sequence* q,
 	seq_reverse( profile->query_rev_sequence, profile->query_sequence, q->L);
 	seq_reverse( profile->composition_bias_rev, profile->composition_bias, q->L);
 
-	if (isProfile) {
+    if (isProfile) {
         // insertion penalties are shifted by one position for the reverse direction (2nd to last becomes first)
         seq_reverse(profile->gIns_rev, q->gIns, q->L - 1);
 
         profile->gDelClose_rev[0] = 0;
+        profile->gDelOpen_rev[0] = 0;
         int32_t k = q->L - 1;
-        for (int32_t i = 0; i < q->L - 1; ++i) {
+        for (int32_t i = 1; i < q->L - 1; ++i) {
             profile->gDelOpen_rev[i] = q->gDelClose[k] * q->gapFraction[k-1] / (255 - q->gapFraction[k]); // TODO: type conversion to calc with floats?
-            profile->gDelClose_rev[i + 1] = q->gDelOpen[k] * (255 - q->gapFraction[k-1]) / q->gapFraction[k];
+            profile->gDelClose_rev[i] = q->gDelOpen[k] * (255 - q->gapFraction[k-1]) / q->gapFraction[k];
             --k;
         }
-        profile->gDelOpen_rev[q->L - 1] = 0;
 
 		for (int32_t i = 0; i < alphabetSize; i++) {
 			const int8_t *startToRead = profile->mat + (i * q->L);

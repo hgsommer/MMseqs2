@@ -495,18 +495,18 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
     const float gapWeightDelStart = gapPseudoCount * MathUtil::fpow2(-gapOpen);
     // we need the seqWeigthSum of two consecutive columns, precalculate for the first column
     float seqWeightSum = 0.0;
-    float seqWeightSumPrev = gapPseudoCount;
+    float seqWeightSumPrev = 0.0;
     for (size_t i = 0; i < setSize; ++i) {
         if (msaSeqs[i][0] != MultipleAlignment::GAP) {
             seqWeightSumPrev += seqWeight[i];
         }
     }
-    // calculation for deletion gap close is always one step ahead
+    gDelOpen.emplace_back(0.0);
     gDelClose.emplace_back(0.0);
     for (size_t pos = 1; pos < queryLength; ++pos) {
         float gapWeightDelOpen = gapWeightDelStart;
         float gapWeightDelClose = gapWeightDelStart;
-        seqWeightSum = gapPseudoCount;
+        seqWeightSum = 0.0;
         for (size_t i = 0; i < setSize; ++i) {
             if (msaSeqs[i][pos] == MultipleAlignment::GAP) {
                 if (msaSeqs[i][pos - 1] != MultipleAlignment::GAP) {
@@ -519,16 +519,15 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
                 }
             }
         }
-        gDelOpen.emplace_back(-MathUtil::flog2(gapWeightDelOpen / seqWeightSumPrev));
-        gDelClose.emplace_back(-MathUtil::flog2(gapWeightDelClose / seqWeightSum));
-        gIns.emplace_back(-MathUtil::flog2(gapWeightsIns[pos - 1] / seqWeightSumPrev));
-        gapFraction.emplace_back(1 - seqWeightSumPrev + gapPseudoCount);
+        gDelOpen.emplace_back(-MathUtil::flog2(gapWeightDelOpen / (seqWeightSumPrev + gapPseudoCount)));
+        gDelClose.emplace_back(-MathUtil::flog2(gapWeightDelClose / (1 - seqWeightSumPrev + gapPseudoCount)));
+        gIns.emplace_back(-MathUtil::flog2(gapWeightsIns[pos - 1] / (seqWeightSumPrev + gapPseudoCount)));
+        gapFraction.emplace_back(1 - (seqWeightSumPrev * setSize + gapPseudoCount) / (setSize + 2 * gapPseudoCount));
         seqWeightSumPrev = seqWeightSum;
     }
-    // fill in the last column except for gDelClose
-    gDelOpen.emplace_back(0.0);
+    // fill in the last column
     gIns.emplace_back(0.0);
-    gapFraction.emplace_back(1 - seqWeightSum + gapPseudoCount);
+    gapFraction.emplace_back(1 - seqWeightSum);
 }
 
 std::string PSSMCalculator::computeConsensusSequence(float *frequency, size_t queryLength, double *pBack, char *num2aa) {
