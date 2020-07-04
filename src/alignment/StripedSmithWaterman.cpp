@@ -338,14 +338,15 @@ s_align SmithWaterman::ssw_align (
 	if (isProfile) {
 		path = banded_sw<PROFILE>(db_sequence + r.dbStartPos1, profile->query_sequence + r.qStartPos1,
 								  NULL, db_length, query_length,
-								  r.qStartPos1, r.score1, gap_open, gap_extend, band_width,
-								  profile->mat, profile->query_length);
+                                  r.qStartPos1, r.score1, gap_open, gap_extend,
+                                  profile->gDelOpen + r.qStartPos1, profile->gDelClose + r.qStartPos1, profile->gIns + r.qStartPos1,
+                                  band_width, profile->mat, profile->query_length);
 	} else {
 		path = banded_sw<SUBSTITUTIONMATRIX>(db_sequence + r.dbStartPos1,
 											 profile->query_sequence + r.qStartPos1,
 											 profile->composition_bias + r.qStartPos1,
 											 db_length, query_length, r.qStartPos1, r.score1,
-											 gap_open, gap_extend, band_width,
+											 gap_open, gap_extend, nullptr, nullptr, nullptr, band_width,
 											 profile->mat, profile->alphabetSize);
 	}
 	if (path != NULL) {
@@ -908,6 +909,9 @@ void SmithWaterman::ssw_init(const Sequence* q,
 	seq_reverse( profile->composition_bias_rev, profile->composition_bias, q->L);
 
     if (isProfile) {
+        profile->gDelOpen = q->gDelOpen;
+        profile->gDelClose = q->gDelClose;
+        profile->gIns = q->gIns;
         // insertion penalties are shifted by one position for the reverse direction (2nd to last becomes first)
         seq_reverse(profile->gIns_rev, q->gIns, q->L - 1);
 
@@ -933,8 +937,9 @@ void SmithWaterman::ssw_init(const Sequence* q,
 template <const unsigned int type>
 SmithWaterman::cigar * SmithWaterman::banded_sw(const unsigned char *db_sequence, const int8_t *query_sequence, const int8_t * compositionBias,
 												int32_t db_length, int32_t query_length, int32_t queryStart,
-												int32_t score, const uint32_t gap_open,
-												const uint32_t gap_extend, int32_t band_width, const int8_t *mat, int32_t n) {
+                                                int32_t score, const uint32_t gap_open, const uint32_t gap_extend,
+                                                int8_t *gDelOpen, int8_t *gDelClose, int8_t *gIns,
+                                                int32_t band_width, const int8_t *mat, int32_t n) {
 	/*! @function
      @abstract  Round an integer to the next closest power-2 integer.
      @param  x  integer to be rounded (in place)
@@ -981,7 +986,9 @@ SmithWaterman::cigar * SmithWaterman::banded_sw(const unsigned char *db_sequence
 			direction = (int8_t*)realloc(direction, s2 * sizeof(int8_t));
 		}
 		direction_line = direction;
-		for (j = 1; LIKELY(j < width - 1); j ++) h_b[j] = 0;
+		for (j = 1; LIKELY(j < width - 1); j ++) {
+		    h_b[j] = 0;
+		}
 		for (i = 0; LIKELY(i < query_length); i ++) {
 			int32_t beg = 0, end = db_length - 1, u = 0, edge;
 			j = i - band_width;	beg = beg > j ? beg : j; // band start
@@ -993,25 +1000,41 @@ SmithWaterman::cigar * SmithWaterman::banded_sw(const unsigned char *db_sequence
 
 			for (j = beg; LIKELY(j <= end); j ++) {
 				int32_t b, e1, f1, d, de, df, dh;
-				set_u(u, band_width, i, j);	set_u(e, band_width, i - 1, j);
-				set_u(b, band_width, i, j - 1); set_u(d, band_width, i - 1, j - 1);
+				set_u(u, band_width, i, j);
+				set_u(e, band_width, i - 1, j);
+				set_u(b, band_width, i, j - 1);
+				set_u(d, band_width, i - 1, j - 1);
 				set_d(de, band_width, i, j, 0);
 				set_d(df, band_width, i, j, 1);
 				set_d(dh, band_width, i, j, 2);
 
-				// TODO needs actual gap costs for PROFILE
-				temp1 = i == 0 ? -gap_open : h_b[e] - gap_open;
-				temp2 = i == 0 ? -gap_extend : e_b[e] - gap_extend;
+                if (type == SUBSTITUTIONMATRIX) {
+                    temp1 = i == 0 ? -gap_open : h_b[e] - gap_open;
+                }
+                if (type == PROFILE) {
+                    temp1 = i == 0 ? -gap_open : h_b[e] - gDelOpen[i];
+                }
+                temp2 = i == 0 ? -gap_extend : e_b[e] - gap_extend;
 				e_b[u] = temp1 > temp2 ? temp1 : temp2;
 				direction_line[de] = temp1 > temp2 ? 3 : 2;
 
-				temp1 = h_c[b] - gap_open;
-				temp2 = f - gap_extend;
+                if (type == SUBSTITUTIONMATRIX) {
+                    temp1 = h_c[b] - gap_open;
+                }
+                if (type == PROFILE) {
+                    temp1 = h_c[b] - gIns[i];
+                }
+                temp2 = f - gap_extend;
 				f = temp1 > temp2 ? temp1 : temp2;
 				direction_line[df] = temp1 > temp2 ? 5 : 4;
 
-				e1 = e_b[u] > 0 ? e_b[u] : 0;
-				f1 = f > 0 ? f : 0;
+                f1 = f > 0 ? f : 0;
+                if (type == SUBSTITUTIONMATRIX) {
+                    e1 = e_b[u] > 0 ? e_b[u] : 0;
+                }
+                if (type == PROFILE) {
+                    e1 = e_b[u] > 0 ? e_b[u] : 0; //std::max(e_b[u] - gDelClose[j], 0);
+                }
 				temp1 = e1 > f1 ? e1 : f1;
 				if(type == SUBSTITUTIONMATRIX){
 					temp2 = h_b[d] + mat[query_sequence[i] * n + db_sequence[j]] + compositionBias[i];
@@ -1026,7 +1049,11 @@ SmithWaterman::cigar * SmithWaterman::banded_sw(const unsigned char *db_sequence
 				if (temp1 <= temp2) direction_line[dh] = 1;
 				else direction_line[dh] = e1 > f1 ? direction_line[de] : direction_line[df];
 			}
-			for (j = 1; j <= u; j ++) h_b[j] = h_c[j];
+			for (j = 1; j <= u; j ++) {
+			    h_b[j] = h_c[j];
+			    //fprintf(stderr, "%d ", h_b[j]);
+			}
+			//fprintf(stderr, "\n");
 		}
 		band_width *= 2;
 	} while (LIKELY(max < score));

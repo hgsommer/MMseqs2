@@ -213,6 +213,9 @@ private:
         simd_int* profile_gDelClose_rev_word;
         simd_int* profile_gIns_rev_byte;
         simd_int* profile_gIns_rev_word;
+        int8_t* gDelOpen;
+        int8_t* gDelClose;
+        int8_t* gIns;
         int8_t* gDelOpen_rev;
         int8_t* gDelClose_rev;
         int8_t* gIns_rev;
@@ -298,7 +301,11 @@ private:
                                  int32_t maskLen);
 
     template <const unsigned int type>
-    SmithWaterman::cigar *banded_sw(const unsigned char *db_sequence, const int8_t *query_sequence, const int8_t * compositionBias, int32_t db_length, int32_t query_length, int32_t queryStart, int32_t score, const uint32_t gap_open, const uint32_t gap_extend, int32_t band_width, const int8_t *mat, int32_t n);
+    SmithWaterman::cigar *banded_sw(const unsigned char *db_sequence, const int8_t *query_sequence,
+                                    const int8_t * compositionBias, int32_t db_length, int32_t query_length,
+                                    int32_t queryStart, int32_t score, const uint32_t gap_open, const uint32_t gap_extend,
+                                    int8_t *gDelOpen, int8_t *gDelClose, int8_t *gIns,
+                                    int32_t band_width, const int8_t *mat, int32_t n);
 
     /*!	@function		Produce CIGAR 32-bit unsigned integer from CIGAR operation and CIGAR length
      @param	length		length of CIGAR
