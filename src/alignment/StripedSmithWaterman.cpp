@@ -447,6 +447,8 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 	//	int32_t distance = query_length / 2;
 	//	int32_t distance = query_length;
 
+    //fprintf(stderr, "start alignment of length %d [%u]\n", query_length, segLen * SIMD_SIZE);
+
 	/* outer loop to process the reference sequence */
 	if (ref_dir == 1) {
 		begin = db_length - 1;
@@ -582,6 +584,12 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 			}
 		}
 
+        //uint8_t *t = (uint8_t *)pvHStore;
+        //for (int ti = 0; ti < segLen * SIMD_SIZE; ++ti) {
+        //    fprintf(stderr, "%d ", t[ti / segLen + ti % segLen * SIMD_SIZE]);
+        //}
+        //fprintf(stderr, "\n");
+
 		/* Record the max score of current column. */
 		max16(maxColumn[i], vMaxColumn);
 		//		fprintf(stderr, "maxColumn[%d]: %d\n", i, maxColumn[i]);
@@ -684,6 +692,8 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 	simd_int vTemp;
 	int32_t edge, begin = 0, end = db_length, step = 1;
 
+    //fprintf(stderr, "start alignment of length %d [%d]\n", query_length, segLen * SIMD_SIZE);
+
 	/* outer loop to process the reference sequence */
 	if (ref_dir == 1) {
 		begin = db_length - 1;
@@ -694,6 +704,7 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 		simd_int e, vF = vZero; /* Initialize F value to 0.
                                 Any errors to vH values will be corrected in the Lazy_F loop.
                                 */
+
 		simd_int vH = pvHStore[segLen - 1];
 		vH = simdi8_shiftl (vH, 2); /* Shift the 128-bit value in vH left by 2 byte. */
 
@@ -778,6 +789,12 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 				for (j = 0; LIKELY(j < segLen); ++j) pvHmax[j] = pvHStore[j];
 			}
 		}
+
+        //uint16_t *t = (uint16_t *)pvHStore;
+        //for (size_t ti = 0; ti < segLen * SIMD_SIZE; ++ti) {
+        //    fprintf(stderr, "%d ", t[ti / segLen + ti % segLen * SIMD_SIZE]);
+        //}
+        //fprintf(stderr, "\n");
 
 		/* Record the max score of current column. */
 		max8(maxColumn[i], vMaxColumn);
