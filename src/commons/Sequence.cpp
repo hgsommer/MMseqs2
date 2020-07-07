@@ -66,7 +66,7 @@ Sequence::Sequence(size_t maxLen, int seqType, const BaseMatrix *subMat, const u
         this->gDelOpen              = new int8_t[maxLen + 1];
         this->gDelClose             = new int8_t[maxLen + 1];
         this->gIns                  = new int8_t[maxLen + 1];
-        this->gapFraction           = new int8_t[maxLen + 1];
+        this->gapFraction           = new float[maxLen + 1];
         this->profile_score         = (short *)        mem_align(ALIGN_INT, (maxLen + 1) * profile_row_size * sizeof(short));
         this->profile_index         = (unsigned int *) mem_align(ALIGN_INT, (maxLen + 1) * profile_row_size * sizeof(int));
         this->profile               = (float *)        mem_align(ALIGN_INT, (maxLen + 1) * PROFILE_AA_SIZE * sizeof(float));
@@ -313,11 +313,10 @@ void Sequence::mapProfile(const char * profileData, bool mapScores, unsigned int
             numConsensusSequence[l] = consensusLetter;
             unsigned short neff = data[currPos + PROFILE_AA_SIZE+2];
             neffM[l] = MathUtil::convertNeffToFloat(neff);
-            // TODO unmask or convertCharToFloat?
             gDelOpen[l] = data[currPos + PROFILE_GAP_DEL_OPEN];
             gDelClose[l] = data[currPos + PROFILE_GAP_DEL_CLOSE];
             gIns[l] = data[currPos + PROFILE_GAP_INS];
-            gapFraction[l] = data[currPos + PROFILE_GAP_FRACTION];
+            gapFraction[l] = MathUtil::convertCharToFloat(data[currPos + PROFILE_GAP_FRACTION]);
             l++;
 
 

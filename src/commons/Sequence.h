@@ -465,7 +465,7 @@ public:
     int8_t          *gDelOpen;
     int8_t          *gDelClose;
     int8_t          *gIns;
-    int8_t          *gapFraction;
+    float           *gapFraction;
     float           *pseudocountsWeight;
     // (PROFILE_AA_SIZE / SIMD_SIZE) + 1 * SIMD_SIZE
     size_t profile_row_size;

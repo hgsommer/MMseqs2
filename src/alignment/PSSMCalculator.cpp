@@ -493,6 +493,7 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
     }
     // compute penalties for deletions
     const float gapWeightDelStart = gapPseudoCount * MathUtil::fpow2(-gapOpen);
+    const float gapG = 0.8; // TODO: make parameter or move somewhere else?
     // we need the seqWeigthSum of two consecutive columns, precalculate for the first column
     float seqWeightSum = 0.0;
     float seqWeightSumPrev = 0.0;
@@ -519,10 +520,10 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
                 }
             }
         }
-        gDelOpen.emplace_back(-MathUtil::flog2(gapWeightDelOpen / (seqWeightSumPrev + gapPseudoCount)));
-        gDelClose.emplace_back(-MathUtil::flog2(gapWeightDelClose / (1 - seqWeightSumPrev + gapPseudoCount)));
-        gIns.emplace_back(-MathUtil::flog2(gapWeightsIns[pos - 1] / (seqWeightSumPrev + gapPseudoCount)));
-        gapFraction.emplace_back(1 - (seqWeightSumPrev * setSize + gapPseudoCount) / (setSize + 2 * gapPseudoCount));
+        gDelOpen.emplace_back(-gapG * MathUtil::flog2(gapWeightDelOpen / (seqWeightSumPrev + gapPseudoCount)));
+        gDelClose.emplace_back(-gapG * MathUtil::flog2(gapWeightDelClose / (1 - seqWeightSumPrev + gapPseudoCount)));
+        gIns.emplace_back(-gapG * MathUtil::flog2(gapWeightsIns[pos - 1] / (seqWeightSumPrev + gapPseudoCount)));
+        gapFraction.emplace_back(1 - seqWeightSumPrev);
         seqWeightSumPrev = seqWeightSum;
     }
     // fill in the last column

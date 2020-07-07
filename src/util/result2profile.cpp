@@ -262,7 +262,7 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
                     result.push_back(static_cast<unsigned char>(pssmRes.gDelOpen[pos]));
                     result.push_back(static_cast<unsigned char>(pssmRes.gDelClose[pos]));
                     result.push_back(static_cast<unsigned char>(pssmRes.gIns[pos]));
-                    result.push_back(static_cast<unsigned char>(pssmRes.gapFraction[pos] * 255));
+                    result.push_back(MathUtil::convertFloatToChar(pssmRes.gapFraction[pos]));
                 }
             }
             resultWriter.writeData(result.c_str(), result.length(), queryKey, thread_idx);

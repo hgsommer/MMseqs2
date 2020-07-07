@@ -926,6 +926,8 @@ void SmithWaterman::ssw_init(const Sequence* q,
 	seq_reverse( profile->composition_bias_rev, profile->composition_bias, q->L);
 
     if (isProfile) {
+        const float gapG = 0.8; // TODO: read from parameters (or shared header?)
+        const int gapPseudoCount = 10; // TODO: read from parameters
         profile->gDelOpen = q->gDelOpen;
         profile->gDelClose = q->gDelClose;
         profile->gIns = q->gIns;
@@ -936,8 +938,8 @@ void SmithWaterman::ssw_init(const Sequence* q,
         profile->gDelOpen_rev[0] = 0;
         int32_t k = q->L - 1;
         for (int32_t i = 1; i < q->L - 1; ++i) {
-            profile->gDelOpen_rev[i] = q->gDelClose[k] * q->gapFraction[k-1] / (255 - q->gapFraction[k]); // TODO: type conversion to calc with floats?
-            profile->gDelClose_rev[i] = q->gDelOpen[k] * (255 - q->gapFraction[k-1]) / q->gapFraction[k];
+            profile->gDelOpen_rev[i] = q->gDelClose[k] - gapG * MathUtil::flog2((q->gapFraction[k-1] + gapPseudoCount) / (1 - q->gapFraction[k] + gapPseudoCount));
+            profile->gDelClose_rev[i] = q->gDelOpen[k] - gapG * MathUtil::flog2(1 - q->gapFraction[k-1] + gapPseudoCount) / (q->gapFraction[k] + gapPseudoCount);
             --k;
         }
 
