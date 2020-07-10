@@ -934,7 +934,7 @@ void SmithWaterman::ssw_init(const Sequence* q,
         profile->gDelClose = q->gDelClose;
         profile->gIns = q->gIns;
         // insertion penalties are shifted by one position for the reverse direction (2nd to last becomes first)
-        seq_reverse(profile->gIns_rev, q->gIns, q->L - 1);
+        std::reverse_copy(q->gIns, q->gIns + q->L - 1, profile->gIns_rev);
 
         profile->gDelClose_rev[0] = 0;
         profile->gDelOpen_rev[0] = 0;
