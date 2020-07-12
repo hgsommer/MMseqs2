@@ -940,11 +940,10 @@ void SmithWaterman::ssw_init(const Sequence* q,
         profile->gDelOpen_rev[0] = 0;
         int32_t k = q->L - 1;
         for (int32_t i = 1; i < q->L - 1; ++i) {
-            profile->gDelOpen_rev[i] = q->gDelClose[k] - gapG * MathUtil::flog2((q->gapFraction[k-1] + gapPseudoCount) / (1 - q->gapFraction[k] + gapPseudoCount));
-            profile->gDelClose_rev[i] = q->gDelOpen[k] - gapG * MathUtil::flog2(1 - q->gapFraction[k-1] + gapPseudoCount) / (q->gapFraction[k] + gapPseudoCount);
+            profile->gDelOpen_rev[i] = q->gDelClose[k] - gapG * MathUtil::flog2((q->gapFraction[k-1] + gapPseudoCount) / (1 - q->gapFraction[k] + gapPseudoCount)) + 0.5;
+            profile->gDelClose_rev[i] = q->gDelOpen[k] - gapG * MathUtil::flog2((1 - q->gapFraction[k-1] + gapPseudoCount) / (q->gapFraction[k] + gapPseudoCount)) + 0.5;
             --k;
         }
-
 		for (int32_t i = 0; i < alphabetSize; i++) {
 			const int8_t *startToRead = profile->mat + (i * q->L);
 			int8_t *startToWrite      = profile->mat_rev + (i * q->L);
