@@ -160,16 +160,16 @@ template <typename T, size_t Elements>
 void createGapProfile(simd_int* profile_gDelOpen, simd_int* profile_gDelClose, simd_int* profile_gIns,
                       const int8_t* gDelOpen, const int8_t* gDelClose, const int8_t* gIns,
                       const int32_t query_length, const int32_t offset) {
-    const int32_t segLen = (query_length + Elements - 1) / Elements;
+    const int32_t segLen = (query_length - offset + Elements - 1) / Elements;
     T* delOpen = (T*) profile_gDelOpen;
     T* delClose = (T*) profile_gDelClose;
     T* ins = (T*) profile_gIns;
     for (int32_t i = 0; LIKELY(i < segLen); ++i) {
         int32_t j = i;
         for (size_t segNum = 0; LIKELY(segNum < Elements); ++segNum) {
-            *delOpen++ = (j < query_length) ? gDelOpen[j + offset - 1] : 0; // TODO: offset - 1 only until position issue is fixed
-            *delClose++ = (j < query_length) ? gDelClose[j + offset - 1] : 0;
-            *ins++ = (j < query_length) ? gIns[j] : 0;
+            *delOpen++ = (j < query_length) ? gDelOpen[j + offset + 1] : 0; // offset + 1 because it calculates E for the next column
+            *delClose++ = (j < query_length) ? gDelClose[j + offset] : 0;
+            *ins++ = (j < query_length) ? gIns[j + offset] : 0;
             j += segLen;
         }
     }
@@ -274,7 +274,7 @@ s_align SmithWaterman::ssw_align (
 			createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_rev_byte, profile->query_rev_sequence, NULL, profile->mat_rev,
 																 r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, profile->query_length);
             createGapProfile<int8_t, VECSIZE_INT * 4>(profile->profile_gDelOpen_rev_byte, profile->profile_gDelClose_rev_byte, profile->profile_gIns_rev_byte,
-                                                      profile->gDelOpen_rev, profile->gDelClose_rev, profile->gIns_rev, profile->query_length, queryOffset);
+                                                      profile->gDelOpen_rev, profile->gDelClose_rev, profile->gIns_rev, profile->query_length, queryOffset - 1);
 		} else {
 			createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_rev_byte, profile->query_rev_sequence, profile->composition_bias_rev, profile->mat,
 																			r.qEndPos1 + 1, profile->alphabetSize, profile->bias, queryOffset, 0);
@@ -292,7 +292,7 @@ s_align SmithWaterman::ssw_align (
 			createQueryProfile<int16_t, VECSIZE_INT * 2, PROFILE>(profile->profile_rev_word, profile->query_rev_sequence, NULL, profile->mat_rev,
 																  r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, profile->query_length);
             createGapProfile<int16_t, VECSIZE_INT * 2>(profile->profile_gDelOpen_rev_word, profile->profile_gDelClose_rev_word, profile->profile_gIns_rev_word,
-                                                       profile->gDelOpen_rev, profile->gDelClose_rev, profile->gIns_rev, profile->query_length, queryOffset);
+                                                       profile->gDelOpen_rev, profile->gDelClose_rev, profile->gIns_rev, profile->query_length, queryOffset - 1);
 		} else {
 			createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_rev_word, profile->query_rev_sequence, profile->composition_bias_rev, profile->mat,
 																			 r.qEndPos1 + 1, profile->alphabetSize, 0, queryOffset, 0);
@@ -895,7 +895,7 @@ void SmithWaterman::ssw_init(const Sequence* q,
 		profile->bias = bias;
 		if (isProfile) {
 			createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_byte, profile->query_sequence, NULL, profile->mat, q->L, alphabetSize, bias, 1, q->L);
-            createGapProfile<int8_t, VECSIZE_INT * 4>(profile->profile_gDelOpen_byte, profile->profile_gDelClose_byte, profile->profile_gIns_byte, q->gDelOpen, q->gDelClose, q->gIns, q->L, 1);
+            createGapProfile<int8_t, VECSIZE_INT * 4>(profile->profile_gDelOpen_byte, profile->profile_gDelClose_byte, profile->profile_gIns_byte, q->gDelOpen, q->gDelClose, q->gIns, q->L, 0);
 		} else {
 			createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_byte, profile->query_sequence, profile->composition_bias, profile->mat, q->L, alphabetSize, bias, 0, 0);
 		}
@@ -910,7 +910,7 @@ void SmithWaterman::ssw_init(const Sequence* q,
 					profile->profile_word_linear[i][j] = mat[i * q->L + j];
 				}
 			}
-			createGapProfile<int16_t, VECSIZE_INT * 2>(profile->profile_gDelOpen_word, profile->profile_gDelClose_word, profile->profile_gIns_word, q->gDelOpen, q->gDelClose, q->gIns, q->L, 1);
+			createGapProfile<int16_t, VECSIZE_INT * 2>(profile->profile_gDelOpen_word, profile->profile_gDelClose_word, profile->profile_gIns_word, q->gDelOpen, q->gDelClose, q->gIns, q->L, 0);
 		}else{
 			createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_word, profile->query_sequence, profile->composition_bias, profile->mat, q->L, alphabetSize, 0, 0, 0);
 			for(int32_t i = 0; i< alphabetSize; i++) {
@@ -939,7 +939,7 @@ void SmithWaterman::ssw_init(const Sequence* q,
         profile->gDelClose_rev[0] = 0;
         profile->gDelOpen_rev[0] = 0;
         int32_t k = q->L - 1;
-        for (int32_t i = 1; i < q->L - 1; ++i) {
+        for (int32_t i = 1; i < q->L; ++i) {
             profile->gDelOpen_rev[i] = q->gDelClose[k] - gapG * MathUtil::flog2((q->gapFraction[k-1] + gapPseudoCount) / (1 - q->gapFraction[k] + gapPseudoCount)) + 0.5;
             profile->gDelClose_rev[i] = q->gDelOpen[k] - gapG * MathUtil::flog2((1 - q->gapFraction[k-1] + gapPseudoCount) / (q->gapFraction[k] + gapPseudoCount)) + 0.5;
             --k;
