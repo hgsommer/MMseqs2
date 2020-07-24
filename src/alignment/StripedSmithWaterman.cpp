@@ -167,8 +167,8 @@ void createGapProfile(simd_int* profile_gDelOpen, simd_int* profile_gDelClose, s
     for (int32_t i = 0; LIKELY(i < segLen); ++i) {
         int32_t j = i;
         for (size_t segNum = 0; LIKELY(segNum < Elements); ++segNum) {
-            *delOpen++ = (j < query_length) ? gDelOpen[j + offset + 1] : 0; // offset + 1 because it calculates E for the next column
-            *delClose++ = (j < query_length) ? gDelClose[j + offset] : 0;
+            *delOpen++ = (j < query_length) ? gDelOpen[j + offset + 1] : 0; // offset + 1 because it calculates F for the next column
+            *delClose++ = (j < query_length) ? gDelClose[j + offset + 1] : 0;
             *ins++ = (j < query_length) ? gIns[j + offset] : 0;
             j += segLen;
         }
@@ -490,13 +490,13 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 
 			/* Get max from vH, vE and vF. */
 			e = simdi_load(pvE + j);
+            vH = simdui8_max(vH, e);
             if (type == PROFILE) {
-                vH = simdui8_max(vH, simdui8_subs(e, simdi_load(gap_close_del + j)));
+                vH = simdui8_max(vH, simdui8_subs(vF, simdi_load(gap_close_del + j)));
             }
             if (type == SUBSTITUTIONMATRIX) {
-                vH = simdui8_max(vH, e);
+                vH = simdui8_max(vH, vF);
             }
-            vH = simdui8_max(vH, vF);
 			vMaxColumn = simdui8_max(vMaxColumn, vH);
 
 			//	max16(maxColumn[i], vMaxColumn);
@@ -508,7 +508,9 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 
 			/* Update vE value. */
             if (type == PROFILE) {
-                vH = simdui8_subs(vH, simdi_load(gap_open_del + j)); /* saturation arithmetic, result >= 0 */
+                // copy vH for update of vF
+                vTemp = vH;
+                vH = simdui8_subs(vH, simdi_load(gap_open_ins + j)); /* saturation arithmetic, result >= 0 */
             }
             if (type == SUBSTITUTIONMATRIX) {
                 vH = simdui8_subs(vH, vGapO); /* saturation arithmetic, result >= 0 */
@@ -519,7 +521,12 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 
 			/* Update vF value. */
 			vF = simdui8_subs(vF, vGapE);
-			vF = simdui8_max(vF, vH);
+            if (type == PROFILE) {
+                vF = simdui8_max(vF, simdui8_subs(vTemp, simdi_load(gap_open_del + j)));
+            }
+            if (type == SUBSTITUTIONMATRIX) {
+                vF = simdui8_max(vF, vH);
+            }
 
 			/* Load the next vH. */
 			vH = simdi_load(pvHLoad + j);
@@ -535,7 +542,7 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 		/*  to the next column. */
 		vF = simdi8_shiftl (vF, 1);
         if (type == PROFILE) {
-            vTemp = simdui8_subs(vH, simdi_load(gap_open_ins + j));
+            vTemp = simdui8_subs(vH, simdi_load(gap_open_del + j));
         }
         if (type == SUBSTITUTIONMATRIX) {
             vTemp = simdui8_subs(vH, vGapO);
@@ -544,7 +551,12 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 		vTemp = simdi8_eq (vTemp, vZero);
 		uint32_t cmp = simdi8_movemask (vTemp);
 		while (cmp != SIMD_MOVEMASK_MAX) {
-			vH = simdui8_max (vH, vF);
+            if (type == PROFILE) {
+                vH = simdui8_max (vH, simdui8_subs(vF, simdi_load(gap_close_del + j)));
+            }
+            if (type == SUBSTITUTIONMATRIX) {
+                vH = simdui8_max (vH, vF);
+            }
 			vMaxColumn = simdui8_max(vMaxColumn, vH);
 			simdi_store (pvHStore + j, vH);
 			vF = simdui8_subs (vF, vGapE);
@@ -557,7 +569,7 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 			vH = simdi_load (pvHStore + j);
 
             if (type == PROFILE) {
-                vTemp = simdui8_subs(vH, simdi_load(gap_open_ins + j));
+                vTemp = simdui8_subs(vH, simdi_load(gap_open_del + j));
             }
             if (type == SUBSTITUTIONMATRIX) {
                 vTemp = simdui8_subs(vH, vGapO);
@@ -725,13 +737,13 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 
 			/* Get max from vH, vE and vF. */
 			e = simdi_load(pvE + j);
+            vH = simdi16_max(vH, e);
             if (type == PROFILE) {
-                vH = simdi16_max(vH, simdui16_subs(e, simdi_load(gap_close_del + j)));
+                vH = simdi16_max(vH, simdui16_subs(vF, simdi_load(gap_close_del + j)));
             }
             if (type == SUBSTITUTIONMATRIX) {
-                vH = simdi16_max(vH, e);
+                vH = simdi16_max(vH, vF);
             }
-            vH = simdi16_max(vH, vF);
 			vMaxColumn = simdi16_max(vMaxColumn, vH);
 
 			/* Save vH values. */
@@ -739,7 +751,9 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 
 			/* Update vE value. */
             if (type == PROFILE) {
-                vH = simdui16_subs(vH, simdi_load(gap_open_del + j)); /* saturation arithmetic, result >= 0 */
+                // copy vH for update of vF
+                vTemp = vH;
+                vH = simdui16_subs(vH, simdi_load(gap_open_ins + j)); /* saturation arithmetic, result >= 0 */
             }
             if (type == SUBSTITUTIONMATRIX) {
                 vH = simdui16_subs(vH, vGapO); /* saturation arithmetic, result >= 0 */
@@ -750,7 +764,12 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 
 			/* Update vF value. */
 			vF = simdui16_subs(vF, vGapE);
-			vF = simdi16_max(vF, vH);
+            if (type == PROFILE) {
+                vF = simdi16_max(vF, simdui16_subs(vTemp, simdi_load(gap_open_del + j)));
+            }
+            if (type == SUBSTITUTIONMATRIX) {
+                vF = simdi16_max(vF, vH);
+            }
 
 			/* Load the next vH. */
 			vH = simdi_load(pvHLoad + j);
@@ -761,11 +780,16 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 			vF = simdi8_shiftl (vF, 2);
 			for (j = 0; LIKELY(j < segLen); ++j) {
 				vH = simdi_load(pvHStore + j);
-				vH = simdi16_max(vH, vF);
+                if (type == PROFILE) {
+                    vH = simdi16_max(vH, simdui16_subs(vF, simdi_load(gap_close_del + j)));
+                }
+                if (type == SUBSTITUTIONMATRIX) {
+                    vH = simdi16_max(vH, vF);
+                }
 				vMaxColumn = simdi16_max(vMaxColumn, vH); //newly added line
 				simdi_store(pvHStore + j, vH);
                 if (type == PROFILE) {
-                    vH = simdui16_subs(vH, simdi_load(gap_open_ins + j));
+                    vH = simdui16_subs(vH, simdi_load(gap_open_del + j));
                 }
                 if (type == SUBSTITUTIONMATRIX) {
                     vH = simdui16_subs(vH, vGapO);
