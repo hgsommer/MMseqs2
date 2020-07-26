@@ -1077,7 +1077,7 @@ SmithWaterman::cigar * SmithWaterman::banded_sw(const unsigned char *db_sequence
                     e1 = e_b[u] > 0 ? e_b[u] : 0;
                 }
                 if (type == PROFILE) {
-                    e1 = e_b[u] > 0 ? e_b[u] : 0; //std::max(e_b[u] - gDelClose[j], 0);
+                    e1 = std::max(0, e_b[u] - gDelClose[i + 1]);
                 }
 				temp1 = e1 > f1 ? e1 : f1;
 				if(type == SUBSTITUTIONMATRIX){
