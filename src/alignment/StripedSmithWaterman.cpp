@@ -312,9 +312,6 @@ s_align SmithWaterman::ssw_align (
             EXIT(EXIT_FAILURE);
         }
 	}
-	else if (isProfile) {
-        fprintf(stderr, "forward/backward score matches: %d.\n", r.score1);
-	}
 
 	r.dbStartPos1 = bests_reverse.first.ref;
 	r.qStartPos1 = r.qEndPos1 - bests_reverse.first.read;
