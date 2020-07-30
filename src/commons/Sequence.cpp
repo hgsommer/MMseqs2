@@ -536,19 +536,19 @@ void Sequence::printProfileStatePSSM(){
 }
 
 
-void Sequence::printProfile(){
+void Sequence::printProfile() const {
     printf("Query profile of sequence %d\n", dbKey);
     printf("Pos ");
-    for(size_t aa = 0; aa < PROFILE_AA_SIZE; aa++) {
-        printf("%3c ", subMat->num2aa[aa]);
+    for (size_t aa = 0; aa < PROFILE_AA_SIZE; aa++) {
+        printf("%6c ", subMat->num2aa[aa]);
     }
-    printf("\n");
-    for(int i = 0; i < this->L; i++){
+    printf("gDO gDC gIn  gFrac\n");
+    for (int i = 0; i < this->L; i++){
         printf("%3d ", i);
-        for(size_t aa = 0; aa < PROFILE_AA_SIZE; aa++){
-            printf("%03.4f ", profile[i * PROFILE_AA_SIZE + aa] );
+        for (size_t aa = 0; aa < PROFILE_AA_SIZE; aa++){
+            printf("%.4f ", profile[i * PROFILE_AA_SIZE + aa]);
         }
-        printf("\n");
+        printf("%3d %3d %3d %6.4f\n", gDelOpen[i], gDelClose[i], gIns[i], gapFraction[i]);
     }
 }
 

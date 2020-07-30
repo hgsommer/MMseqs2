@@ -498,7 +498,7 @@ public:
 
     void printProfileStatePSSM();
 
-    void printProfile();
+    void printProfile() const;
 
     int8_t const * getAlignmentProfile()const;
 
