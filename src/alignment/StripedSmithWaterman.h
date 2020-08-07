@@ -138,7 +138,7 @@ public:
                         const double filters,
                         EvalueComputation * filterd,
                         const int covMode, const float covThr,
-                        const int32_t maskLen);
+                        const int32_t maskLen, const size_t id);
 
 
     /*!	@function computed ungapped alignment score
@@ -316,6 +316,8 @@ private:
 
     s_profile* profile;
 
+    size_t query_id;
+    size_t target_id;
 
     const static unsigned int SUBSTITUTIONMATRIX = 1;
     const static unsigned int PROFILE = 2;

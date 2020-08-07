@@ -88,7 +88,7 @@ Matcher::result_t Matcher::getSWResult(Sequence* dbSeq, const int diagonal, bool
         alignment = nuclaligner->align(dbSeq, diagonal, isReverse, backtrace, aaIds, evaluer, wrappedScoring);
         alignmentMode = Matcher::SCORE_COV_SEQID;
     }else{ if(isIdentity==false){
-            alignment = aligner->ssw_align(dbSeq->numSequence, dbSeq->L, gapOpen, gapExtend, alignmentMode, evalThr, evaluer, covMode, covThr, maskLen);
+            alignment = aligner->ssw_align(dbSeq->numSequence, dbSeq->L, gapOpen, gapExtend, alignmentMode, evalThr, evaluer, covMode, covThr, maskLen, dbSeq->getId());
         }else{
             alignment = aligner->scoreIdentical(dbSeq->numSequence, dbSeq->L, evaluer, alignmentMode);
         }

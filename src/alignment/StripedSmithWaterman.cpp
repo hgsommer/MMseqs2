@@ -184,8 +184,9 @@ s_align SmithWaterman::ssw_align (
 		const double  evalueThr,
 		EvalueComputation * evaluer,
 		const int covMode, const float covThr,
-		const int32_t maskLen) {
+		const int32_t maskLen, const size_t id) {
 
+    target_id = id;
 	int32_t word = 0, query_length = profile->query_length;
 	int32_t band_width = 0;
 	cigar* path;
@@ -307,7 +308,8 @@ s_align SmithWaterman::ssw_align (
         }
 	}
 	if(bests_reverse.first.score != r.score1){
-        fprintf(stderr, "Score of forward/backward SW differ: %d %d. This should not happen.\n", r.score1, bests_reverse.first.score);
+        fprintf(stderr, "Score of forward/backward SW differ: %d %d. Q: %lu T: %lu.\n", r.score1, bests_reverse.first.score, query_id, target_id);
+        fprintf(stderr, "Start: Q: %d, T: %d. End: Q: %d, T %d\n", r.qEndPos1 - bests_reverse.first.read, bests_reverse.first.ref, r.qEndPos1, r.dbEndPos1);
         if (!isProfile) {
             EXIT(EXIT_FAILURE);
         }
@@ -870,6 +872,7 @@ void SmithWaterman::ssw_init(const Sequence* q,
 							 const BaseMatrix *m,
 							 const int8_t score_size) {
 
+    query_id = q->getId();
 	profile->bias = 0;
 	profile->sequence_type = q->getSequenceType();
     const int32_t alphabetSize = m->alphabetSize;
