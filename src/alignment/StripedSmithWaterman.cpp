@@ -552,6 +552,7 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 		while (cmp != SIMD_MOVEMASK_MAX) {
             if (type == PROFILE) {
                 vH = simdui8_max (vH, simdui8_subs(vF, simdi_load(gap_close_del + j)));
+                simdi_store(pvE + j, simdui8_max(simdi_load(pvE + j), simdui8_subs(vH, simdi_load(gap_open_ins + j))));
             }
             if (type == SUBSTITUTIONMATRIX) {
                 vH = simdui8_max (vH, vF);
@@ -781,6 +782,7 @@ std::pair<SmithWaterman::alignment_end, SmithWaterman::alignment_end> SmithWater
 				vH = simdi_load(pvHStore + j);
                 if (type == PROFILE) {
                     vH = simdi16_max(vH, simdui16_subs(vF, simdi_load(gap_close_del + j)));
+                    simdi_store(pvE + j, simdi16_max(simdi_load(pvE + j), simdui16_subs(vH, simdi_load(gap_open_ins + j))));
                 }
                 if (type == SUBSTITUTIONMATRIX) {
                     vH = simdi16_max(vH, vF);
