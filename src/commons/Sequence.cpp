@@ -323,6 +323,7 @@ void Sequence::mapProfile(const char * profileData, bool mapScores, unsigned int
             // go to begin of next entry 0, 20, 40, 60, ...
             currPos += PROFILE_READIN_SIZE;
         }
+        gapPseudoCount = MathUtil::convertCharToFloat(data[PROFILE_GAP_PC]);
         this->L = l;
         if(l > maxLen ){
             Debug(Debug::INFO) << "Entry " << dbKey << " is longer than max seq. len " << maxLen << "\n";

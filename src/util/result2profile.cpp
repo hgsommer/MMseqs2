@@ -250,6 +250,7 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
                     }
                 }
 
+                char pseudoCountScaled = MathUtil::convertFloatToChar(pssmRes.gapPseudoCount);
                 for (size_t pos = 0; pos < res.centerLength; pos++) {
                     for (size_t aa = 0; aa < Sequence::PROFILE_AA_SIZE; aa++) {
                         result.push_back(Sequence::scoreMask(pssmRes.prob[pos * Sequence::PROFILE_AA_SIZE + aa]));
@@ -263,6 +264,7 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
                     result.push_back(static_cast<unsigned char>(pssmRes.gDelClose[pos]));
                     result.push_back(static_cast<unsigned char>(pssmRes.gIns[pos]));
                     result.push_back(MathUtil::convertFloatToChar(pssmRes.gapFraction[pos]));
+                    result.push_back(pseudoCountScaled);
                 }
             }
             resultWriter.writeData(result.c_str(), result.length(), queryKey, thread_idx);

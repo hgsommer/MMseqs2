@@ -60,6 +60,10 @@ PSSMCalculator::Profile PSSMCalculator::computePSSMFromMSA(size_t setSize, size_
                                                            const std::vector<Matcher::result_t> &alnResults, bool wg) {
     // Quick and dirty calculation of the weight per sequence wg[k]
     computeSequenceWeights(seqWeight, queryLength, setSize, msaSeqs);
+    seqWeightTotal = 0.0; // TODO: MathUtil::NormalizeTo1 computes the same sum again, could be optimized?
+    for (size_t i = 0; i < setSize; ++i) {
+        seqWeightTotal += seqWeight[i];
+    }
     MathUtil::NormalizeTo1(seqWeight, setSize);
     if (wg == false) {
         // compute context specific counts and Neff
@@ -90,7 +94,7 @@ PSSMCalculator::Profile PSSMCalculator::computePSSMFromMSA(size_t setSize, size_
 //    PSSMCalculator::printProfile(queryLength);
 
 //    PSSMCalculator::printPSSM(queryLength);
-    return Profile(pssm, profile, Neff_M, gDelOpen.data(), gDelClose.data(), gIns.data(), gapFraction.data(), consensusSequence);
+    return Profile(pssm, profile, Neff_M, gDelOpen.data(), gDelClose.data(), gIns.data(), gapFraction.data(), gapPseudoCount / seqWeightTotal, consensusSequence);
 }
 
 void PSSMCalculator::printProfile(size_t queryLength) {
@@ -475,8 +479,11 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
     gIns.clear();
     gapFraction.clear();
     gapWeightsIns.clear();
+    const float pseudoCounts = gapPseudoCount / seqWeightTotal;
+    const float gapWeightStart = pseudoCounts * MathUtil::fpow2(-gapOpen);
+    const float gapG = 0.8; // TODO: make parameter or move somewhere else?
     // compute penalties for insertions
-    gapWeightsIns.resize(queryLength, gapPseudoCount * MathUtil::fpow2(-gapOpen));
+    gapWeightsIns.resize(queryLength, gapWeightStart);
     for (size_t i = 0; i < alnResults.size(); ++i) {
         size_t targetPos = alnResults[i].dbStartPos; // current position in the reference sequence
         for (size_t k = 0; k < alnResults[i].backtrace.length(); ++k) {
@@ -492,8 +499,6 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
         }
     }
     // compute penalties for deletions
-    const float gapWeightDelStart = gapPseudoCount * MathUtil::fpow2(-gapOpen);
-    const float gapG = 0.8; // TODO: make parameter or move somewhere else?
     // we need the seqWeigthSum of two consecutive columns, precalculate for the first column
     float seqWeightSum = 0.0;
     float seqWeightSumPrev = 0.0;
@@ -505,8 +510,8 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
     gDelOpen.emplace_back(0.0);
     gDelClose.emplace_back(0.0);
     for (size_t pos = 1; pos < queryLength; ++pos) {
-        float gapWeightDelOpen = gapWeightDelStart;
-        float gapWeightDelClose = gapWeightDelStart;
+        float gapWeightDelOpen = gapWeightStart;
+        float gapWeightDelClose = gapWeightStart;
         seqWeightSum = 0.0;
         for (size_t i = 0; i < setSize; ++i) {
             if (msaSeqs[i][pos] == MultipleAlignment::GAP) {
@@ -520,9 +525,9 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
                 }
             }
         }
-        gDelOpen.emplace_back(-gapG * MathUtil::flog2(gapWeightDelOpen / (seqWeightSumPrev + gapPseudoCount)));
-        gDelClose.emplace_back(-gapG * MathUtil::flog2(gapWeightDelClose / (1 - seqWeightSumPrev + gapPseudoCount)));
-        gIns.emplace_back(-gapG * MathUtil::flog2(gapWeightsIns[pos - 1] / (seqWeightSumPrev + gapPseudoCount)));
+        gDelOpen.emplace_back(-gapG * MathUtil::flog2(gapWeightDelOpen / (seqWeightSumPrev + pseudoCounts)));
+        gDelClose.emplace_back(-gapG * MathUtil::flog2(gapWeightDelClose / (1 - seqWeightSumPrev + pseudoCounts)));
+        gIns.emplace_back(-gapG * MathUtil::flog2(gapWeightsIns[pos - 1] / (seqWeightSumPrev + pseudoCounts)));
         gapFraction.emplace_back(1 - seqWeightSumPrev);
         seqWeightSumPrev = seqWeightSum;
     }

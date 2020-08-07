@@ -20,12 +20,14 @@ public:
         const float *gDelClose;
         const float *gIns;
         const float *gapFraction;
+        const float gapPseudoCount;
         std::string consensus;
 
         Profile(char *pssm, float *prob, float *neffM, const float *gDelOpen, const float *gDelClose,
-                const float *gIns, const float *gapFraction, std::string consensus)
+                const float *gIns, const float *gapFraction, const float gapPseudoCount, std::string consensus)
                 : pssm(pssm), prob(prob), neffM(neffM), gDelOpen(gDelOpen), gDelClose(gDelClose),
-                  gIns(gIns), gapFraction(gapFraction), consensus(consensus) {}
+                  gIns(gIns), gapFraction(gapFraction), gapPseudoCount(gapPseudoCount), consensus(consensus) {
+        }
     };
 
     PSSMCalculator(SubstitutionMatrix *subMat, size_t maxSeqLength, size_t maxSetSize, float pca, float pcb, int gapOpen, int gapPseudoCount);
@@ -52,6 +54,9 @@ private:
 
     // contains sequence weights (global)
     float * seqWeight;
+
+    // sum of sequence weights
+    float seqWeightTotal;
 
     // contains MSA AA matchWeight
     float * matchWeight;

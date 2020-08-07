@@ -467,6 +467,7 @@ public:
     int8_t          *gIns;
     float           *gapFraction;
     float           *pseudocountsWeight;
+    float            gapPseudoCount;
     // (PROFILE_AA_SIZE / SIMD_SIZE) + 1 * SIMD_SIZE
     size_t profile_row_size;
 
@@ -477,8 +478,9 @@ public:
     static const size_t PROFILE_GAP_DEL_CLOSE = 24;
     static const size_t PROFILE_GAP_INS = 25;
     static const size_t PROFILE_GAP_FRACTION = 26;
+    static const size_t PROFILE_GAP_PC = 27;
     // 20 AA, 1 query, 1 consensus, 1 Neff M, 4 gap penalties
-    static const size_t PROFILE_READIN_SIZE = 27;
+    static const size_t PROFILE_READIN_SIZE = 28;
     ScoreMatrix **profile_matrix;
     // Memory layout of this profile is qL * AA
     //   Query length
