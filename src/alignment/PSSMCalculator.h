@@ -16,17 +16,15 @@ public:
         const char * pssm;
         float * prob;
         const float * neffM;
-        const float *gDelOpen;
-        const float *gDelClose;
-        const float *gIns;
-        const float *gapFraction;
-        const float gapPseudoCount;
+        const uint8_t *gDelFwd;
+        const uint8_t *gDelRev;
+        const uint8_t *gIns;
         std::string consensus;
 
-        Profile(char *pssm, float *prob, float *neffM, const float *gDelOpen, const float *gDelClose,
-                const float *gIns, const float *gapFraction, const float gapPseudoCount, std::string consensus)
-                : pssm(pssm), prob(prob), neffM(neffM), gDelOpen(gDelOpen), gDelClose(gDelClose),
-                  gIns(gIns), gapFraction(gapFraction), gapPseudoCount(gapPseudoCount), consensus(consensus) {
+        Profile(char *pssm, float *prob, float *neffM, const uint8_t *gDelFwd, const uint8_t *gDelRev,
+                const uint8_t *gIns, std::string consensus)
+                : pssm(pssm), prob(prob), neffM(neffM), gDelFwd(gDelFwd), gDelRev(gDelRev),
+                  gIns(gIns), consensus(consensus) {
         }
     };
 
@@ -73,17 +71,14 @@ private:
     // PSSM contains log odds PSSM values
     char * pssm;
 
-    // position-specific gap open penalties for deletions
-    std::vector<float> gDelOpen;
+    // position-specific deletion penalties (forward direction)
+    uint8_t *gDelFwd;
 
-    // position-specific gap close penalties for deletions
-    std::vector<float> gDelClose;
+    // position-specific deletion penalties (reverse direction)
+    uint8_t *gDelRev;
 
     // position-specific gap open penalties for insertions
-    std::vector<float> gIns;
-
-    // weighted fraction of gaps to include in the profile
-    std::vector<float> gapFraction;
+    uint8_t *gIns;
 
     // preallocated memory for computing of gap penalties
     std::vector<float> gapWeightsIns;

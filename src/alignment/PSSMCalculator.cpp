@@ -27,10 +27,9 @@ PSSMCalculator::PSSMCalculator(SubstitutionMatrix *subMat, size_t maxSeqLength, 
     }
     wi = new float[maxSetSize];
     naa = new int[maxSeqLength + 1];
-    gDelOpen.reserve(maxSeqLength + 1);
-    gDelClose.reserve(maxSeqLength + 1);
-    gIns.reserve(maxSeqLength + 1);
-    gapFraction.reserve(maxSeqLength + 1);
+    gDelFwd = new uint8_t[(maxSeqLength + 1)];
+    gDelRev = new uint8_t[(maxSeqLength + 1)];
+    gIns = new uint8_t[(maxSeqLength + 1)];
     gapWeightsIns.reserve(maxSeqLength + 1);
 }
 
@@ -48,6 +47,9 @@ PSSMCalculator::~PSSMCalculator() {
     delete [] w_contrib;
     delete [] wi;
     delete [] naa;
+    delete [] gDelFwd;
+    delete [] gDelRev;
+    delete [] gIns;
 }
 
 // this overload is only used in TestProfileAlignment.cpp and TestPSSM.cpp
@@ -94,7 +96,7 @@ PSSMCalculator::Profile PSSMCalculator::computePSSMFromMSA(size_t setSize, size_
 //    PSSMCalculator::printProfile(queryLength);
 
 //    PSSMCalculator::printPSSM(queryLength);
-    return Profile(pssm, profile, Neff_M, gDelOpen.data(), gDelClose.data(), gIns.data(), gapFraction.data(), gapPseudoCount / seqWeightTotal, consensusSequence);
+    return Profile(pssm, profile, Neff_M, gDelFwd, gDelRev, gIns, consensusSequence);
 }
 
 void PSSMCalculator::printProfile(size_t queryLength) {
@@ -102,13 +104,13 @@ void PSSMCalculator::printProfile(size_t queryLength) {
     for (size_t aa = 0; aa < Sequence::PROFILE_AA_SIZE; aa++) {
         printf(" %6c", subMat->num2aa[aa]);
     }
-    printf(" gDelOpn gDelCls gInsOpn   gFrac\n");
+    printf(" gDelOpn gDelCls gInsOpn\n");
     for (size_t i = 0; i < queryLength; i++) {
         printf("%3zu", i);
         for (size_t aa = 0; aa < Sequence::PROFILE_AA_SIZE; aa++) {
             printf(" %.4f", profile[i * Sequence::PROFILE_AA_SIZE + aa]);
         }
-        printf(" %7.4f %7.4f %7.4f %7.4f\n", gDelOpen[i], gDelClose[i], gIns[i], gapFraction[i]);
+        printf(" %7d %7d %7d\n", gDelFwd[i] & 0xF, gDelFwd[i] >> 4, gIns[i]);
     }
 }
 
@@ -473,11 +475,6 @@ void PSSMCalculator::computeContextSpecificWeights(float * matchWeight, float *w
 }
 
 void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, const char **msaSeqs, const std::vector<Matcher::result_t> &alnResults) {
-    // clear previous content left from former runs, this does not change the capacity
-    gDelOpen.clear();
-    gDelClose.clear();
-    gIns.clear();
-    gapFraction.clear();
     gapWeightsIns.clear();
     const float pseudoCounts = gapPseudoCount / seqWeightTotal;
     const float gapWeightStart = pseudoCounts * MathUtil::fpow2(-gapOpen);
@@ -507,8 +504,10 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
             seqWeightSumPrev += seqWeight[i];
         }
     }
-    gDelOpen.emplace_back(0.0);
-    gDelClose.emplace_back(0.0);
+    size_t k = queryLength - 1;
+    gDelFwd[0] = 0;
+    gDelRev[0] = 0;
+    gIns[k] = 0;
     for (size_t pos = 1; pos < queryLength; ++pos) {
         float gapWeightDelOpen = gapWeightStart;
         float gapWeightDelClose = gapWeightStart;
@@ -525,15 +524,17 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
                 }
             }
         }
-        gDelOpen.emplace_back(-gapG * MathUtil::flog2(gapWeightDelOpen / (seqWeightSumPrev + pseudoCounts)));
-        gDelClose.emplace_back(-gapG * MathUtil::flog2(gapWeightDelClose / (1 - seqWeightSumPrev + pseudoCounts)));
-        gIns.emplace_back(-gapG * MathUtil::flog2(gapWeightsIns[pos - 1] / (seqWeightSumPrev + pseudoCounts)));
-        gapFraction.emplace_back(1 - seqWeightSumPrev);
+        float gDelOpenFwd = -gapG * MathUtil::flog2(gapWeightDelOpen / (seqWeightSumPrev + pseudoCounts)) + 0.5;
+        float gDelCloseFwd = -gapG * MathUtil::flog2(gapWeightDelClose / (1 - seqWeightSumPrev + pseudoCounts)) + 0.5;
+        float gDelOpenRev = -gapG * MathUtil::flog2(gapWeightDelClose / (seqWeightSum + pseudoCounts)) + 0.5;
+        float gDelCloseRev = -gapG * MathUtil::flog2(gapWeightDelOpen / (1 - seqWeightSum + pseudoCounts)) + 0.5;
+        // TODO: warning if any of the penalties is > 15 (overflow condition)
+        gDelFwd[pos] = static_cast<uint8_t>(gDelOpenFwd) | (static_cast<uint8_t>(gDelCloseFwd) << 4);
+        gDelRev[k] = static_cast<uint8_t>(gDelOpenRev) | (static_cast<uint8_t>(gDelCloseRev) << 4);
+        gIns[pos - 1] = -gapG * MathUtil::flog2(gapWeightsIns[pos - 1] / (seqWeightSumPrev + pseudoCounts));
         seqWeightSumPrev = seqWeightSum;
+        --k;
     }
-    // fill in the last column
-    gIns.emplace_back(0.0);
-    gapFraction.emplace_back(1 - seqWeightSum);
 }
 
 std::string PSSMCalculator::computeConsensusSequence(float *frequency, size_t queryLength, double *pBack, char *num2aa) {

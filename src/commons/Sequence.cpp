@@ -63,10 +63,9 @@ Sequence::Sequence(size_t maxLen, int seqType, const BaseMatrix *subMat, const u
         }
         this->pNullBuffer           = new float[maxLen + 1];
         this->neffM                 = new float[maxLen + 1];
-        this->gDelOpen              = new int8_t[maxLen + 1];
-        this->gDelClose             = new int8_t[maxLen + 1];
-        this->gIns                  = new int8_t[maxLen + 1];
-        this->gapFraction           = new float[maxLen + 1];
+        this->gDelFwd               = new uint8_t[maxLen + 1];
+        this->gDelRev               = new uint8_t[maxLen + 1];
+        this->gIns                  = new uint8_t[maxLen + 1];
         this->profile_score         = (short *)        mem_align(ALIGN_INT, (maxLen + 1) * profile_row_size * sizeof(short));
         this->profile_index         = (unsigned int *) mem_align(ALIGN_INT, (maxLen + 1) * profile_row_size * sizeof(int));
         this->profile               = (float *)        mem_align(ALIGN_INT, (maxLen + 1) * PROFILE_AA_SIZE * sizeof(float));
@@ -101,10 +100,9 @@ Sequence::~Sequence() {
         }
         delete[] profile_matrix;
         delete[] neffM;
-        delete[] gDelOpen;
-        delete[] gDelClose;
+        delete[] gDelFwd;
+        delete[] gDelRev;
         delete[] gIns;
-        delete[] gapFraction;
         delete[] pNullBuffer;
         free(profile);
         free(pseudocountsWeight);
@@ -313,17 +311,15 @@ void Sequence::mapProfile(const char * profileData, bool mapScores, unsigned int
             numConsensusSequence[l] = consensusLetter;
             unsigned short neff = data[currPos + PROFILE_AA_SIZE+2];
             neffM[l] = MathUtil::convertNeffToFloat(neff);
-            gDelOpen[l] = data[currPos + PROFILE_GAP_DEL_OPEN];
-            gDelClose[l] = data[currPos + PROFILE_GAP_DEL_CLOSE];
+            gDelFwd[l] = data[currPos + PROFILE_GAP_DEL_FWD];
+            gDelRev[l] = data[currPos + PROFILE_GAP_DEL_REV];
             gIns[l] = data[currPos + PROFILE_GAP_INS];
-            gapFraction[l] = MathUtil::convertCharToFloat(data[currPos + PROFILE_GAP_FRACTION]);
             l++;
 
 
             // go to begin of next entry 0, 20, 40, 60, ...
             currPos += PROFILE_READIN_SIZE;
         }
-        gapPseudoCount = MathUtil::convertCharToFloat(data[PROFILE_GAP_PC]);
         this->L = l;
         if(l > maxLen ){
             Debug(Debug::INFO) << "Entry " << dbKey << " is longer than max seq. len " << maxLen << "\n";
@@ -543,13 +539,13 @@ void Sequence::printProfile() const {
     for (size_t aa = 0; aa < PROFILE_AA_SIZE; aa++) {
         printf("%6c ", subMat->num2aa[aa]);
     }
-    printf("gDO gDC gIn  gFrac\n");
+    printf("gDO gDC gIn\n");
     for (int i = 0; i < this->L; i++){
         printf("%3d ", i);
         for (size_t aa = 0; aa < PROFILE_AA_SIZE; aa++){
             printf("%.4f ", profile[i * PROFILE_AA_SIZE + aa]);
         }
-        printf("%3d %3d %3d %6.4f\n", gDelOpen[i], gDelClose[i], gIns[i], gapFraction[i]);
+        printf("%3d %3d %3d\n", gDelFwd[i] & 0xF, gDelFwd[i] >> 4, gIns[i]);
     }
 }
 

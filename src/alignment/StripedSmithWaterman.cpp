@@ -57,9 +57,11 @@ SmithWaterman::SmithWaterman(size_t maxSequenceLength, int aaSize, bool aaBiasCo
     profile->profile_gDelClose_rev_word = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
     profile->profile_gIns_rev_byte = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
     profile->profile_gIns_rev_word = (simd_int*)mem_align(ALIGN_INT, segSize * sizeof(simd_int));
-    profile->gDelOpen_rev = new int8_t[maxSequenceLength];
-    profile->gDelClose_rev = new int8_t[maxSequenceLength];
-    profile->gIns_rev = new int8_t[maxSequenceLength];
+    profile->gDelOpen = new uint8_t[maxSequenceLength];
+    profile->gDelClose = new uint8_t[maxSequenceLength];
+    profile->gDelOpen_rev = new uint8_t[maxSequenceLength];
+    profile->gDelClose_rev = new uint8_t[maxSequenceLength];
+    profile->gIns_rev = new uint8_t[maxSequenceLength];
 	profile->query_rev_sequence = new int8_t[maxSequenceLength];
 	profile->query_sequence     = new int8_t[maxSequenceLength];
 	profile->composition_bias   = new int8_t[maxSequenceLength];
@@ -101,6 +103,8 @@ SmithWaterman::~SmithWaterman(){
     free(profile->profile_gDelClose_rev_word);
     free(profile->profile_gIns_rev_byte);
     free(profile->profile_gIns_rev_word);
+    delete[] profile->gDelOpen;
+    delete[] profile->gDelClose;
     delete[] profile->gDelOpen_rev;
     delete[] profile->gDelClose_rev;
     delete[] profile->gIns_rev;
@@ -158,7 +162,7 @@ void SmithWaterman::createQueryProfile(simd_int *profile, const int8_t *query_se
 
 template <typename T, size_t Elements>
 void createGapProfile(simd_int* profile_gDelOpen, simd_int* profile_gDelClose, simd_int* profile_gIns,
-                      const int8_t* gDelOpen, const int8_t* gDelClose, const int8_t* gIns,
+                      const uint8_t* gDelOpen, const uint8_t* gDelClose, const uint8_t* gIns,
                       const int32_t query_length, const int32_t offset) {
     const int32_t segLen = (query_length - offset + Elements - 1) / Elements;
     T* delOpen = (T*) profile_gDelOpen;
@@ -902,6 +906,25 @@ void SmithWaterman::ssw_init(const Sequence* q,
 		memcpy(profile->mat, mat, alphabetSize * alphabetSize * sizeof(int8_t));
 	}
 	memcpy(profile->query_sequence, q->numSequence, q->L);
+    if (isProfile) {
+        profile->gIns = q->gIns;
+        // insertion penalties are shifted by one position for the reverse direction (2nd to last becomes first)
+        std::reverse_copy(q->gIns, q->gIns + q->L - 1, profile->gIns_rev);
+
+        profile->gDelClose_rev[0] = 0;
+        profile->gDelOpen_rev[0] = 0;
+        for (int32_t i = 0; i < q->L; ++i) {
+            profile->gDelOpen[i] = q->gDelFwd[i] & 0xF;
+            profile->gDelClose[i] = q->gDelFwd[i] >> 4;
+            profile->gDelOpen_rev[i] = q->gDelRev[i] & 0xF;
+            profile->gDelClose_rev[i] = q->gDelRev[i] >> 4;
+        }
+        for (int32_t i = 0; i < alphabetSize; i++) {
+            const int8_t *startToRead = profile->mat + (i * q->L);
+            int8_t *startToWrite      = profile->mat_rev + (i * q->L);
+            std::reverse_copy(startToRead, startToRead + q->L, startToWrite);
+        }
+    }
 	if (score_size == 0 || score_size == 2) {
 		/* Find the bias to use in the substitution matrix */
 		int32_t bias = 0;
@@ -921,7 +944,7 @@ void SmithWaterman::ssw_init(const Sequence* q,
 		profile->bias = bias;
 		if (isProfile) {
 			createQueryProfile<int8_t, VECSIZE_INT * 4, PROFILE>(profile->profile_byte, profile->query_sequence, NULL, profile->mat, q->L, alphabetSize, bias, 1, q->L);
-            createGapProfile<int8_t, VECSIZE_INT * 4>(profile->profile_gDelOpen_byte, profile->profile_gDelClose_byte, profile->profile_gIns_byte, q->gDelOpen, q->gDelClose, q->gIns, q->L, 0);
+            createGapProfile<int8_t, VECSIZE_INT * 4>(profile->profile_gDelOpen_byte, profile->profile_gDelClose_byte, profile->profile_gIns_byte, profile->gDelOpen, profile->gDelClose, q->gIns, q->L, 0);
 		} else {
 			createQueryProfile<int8_t, VECSIZE_INT * 4, SUBSTITUTIONMATRIX>(profile->profile_byte, profile->query_sequence, profile->composition_bias, profile->mat, q->L, alphabetSize, bias, 0, 0);
 		}
@@ -936,7 +959,7 @@ void SmithWaterman::ssw_init(const Sequence* q,
 					profile->profile_word_linear[i][j] = mat[i * q->L + j];
 				}
 			}
-			createGapProfile<int16_t, VECSIZE_INT * 2>(profile->profile_gDelOpen_word, profile->profile_gDelClose_word, profile->profile_gIns_word, q->gDelOpen, q->gDelClose, q->gIns, q->L, 0);
+			createGapProfile<int16_t, VECSIZE_INT * 2>(profile->profile_gDelOpen_word, profile->profile_gDelClose_word, profile->profile_gIns_word, profile->gDelOpen, profile->gDelClose, q->gIns, q->L, 0);
 		}else{
 			createQueryProfile<int16_t, VECSIZE_INT * 2, SUBSTITUTIONMATRIX>(profile->profile_word, profile->query_sequence, profile->composition_bias, profile->mat, q->L, alphabetSize, 0, 0, 0);
 			for(int32_t i = 0; i< alphabetSize; i++) {
@@ -953,28 +976,6 @@ void SmithWaterman::ssw_init(const Sequence* q,
 	seq_reverse( profile->query_rev_sequence, profile->query_sequence, q->L);
 	seq_reverse( profile->composition_bias_rev, profile->composition_bias, q->L);
 
-    if (isProfile) {
-        const float gapG = 0.8; // TODO: read from parameters (or shared header?)
-        profile->gDelOpen = q->gDelOpen;
-        profile->gDelClose = q->gDelClose;
-        profile->gIns = q->gIns;
-        // insertion penalties are shifted by one position for the reverse direction (2nd to last becomes first)
-        std::reverse_copy(q->gIns, q->gIns + q->L - 1, profile->gIns_rev);
-
-        profile->gDelClose_rev[0] = 0;
-        profile->gDelOpen_rev[0] = 0;
-        int32_t k = q->L - 1;
-        for (int32_t i = 1; i < q->L; ++i) {
-            profile->gDelOpen_rev[i] = q->gDelClose[k] - gapG * MathUtil::flog2((q->gapFraction[k-1] + q->gapPseudoCount) / (1 - q->gapFraction[k] + q->gapPseudoCount)) + 0.5;
-            profile->gDelClose_rev[i] = q->gDelOpen[k] - gapG * MathUtil::flog2((1 - q->gapFraction[k-1] + q->gapPseudoCount) / (q->gapFraction[k] + q->gapPseudoCount)) + 0.5;
-            --k;
-        }
-		for (int32_t i = 0; i < alphabetSize; i++) {
-			const int8_t *startToRead = profile->mat + (i * q->L);
-			int8_t *startToWrite      = profile->mat_rev + (i * q->L);
-			std::reverse_copy(startToRead, startToRead + q->L, startToWrite);
-		}
-	}
 	profile->query_length = q->L;
 	profile->alphabetSize = alphabetSize;
 }
@@ -983,7 +984,7 @@ template <const unsigned int type>
 SmithWaterman::cigar * SmithWaterman::banded_sw(const unsigned char *db_sequence, const int8_t *query_sequence, const int8_t * compositionBias,
 												int32_t db_length, int32_t query_length, int32_t queryStart,
                                                 int32_t score, const uint32_t gap_open, const uint32_t gap_extend,
-                                                int8_t *gDelOpen, int8_t *gDelClose, int8_t *gIns,
+                                                uint8_t *gDelOpen, uint8_t *gDelClose, uint8_t *gIns,
                                                 int32_t band_width, const int8_t *mat, int32_t n) {
 	/*! @function
      @abstract  Round an integer to the next closest power-2 integer.
