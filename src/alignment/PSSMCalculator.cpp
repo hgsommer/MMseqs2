@@ -104,13 +104,14 @@ void PSSMCalculator::printProfile(size_t queryLength) {
     for (size_t aa = 0; aa < Sequence::PROFILE_AA_SIZE; aa++) {
         printf(" %6c", subMat->num2aa[aa]);
     }
-    printf(" gDelOpn gDelCls gInsOpn\n");
+    printf(" gDelOFw gDelCFw gDelORv gDelCRv gInsOpn\n");
+    size_t iMax = queryLength - 1;
     for (size_t i = 0; i < queryLength; i++) {
         printf("%3zu", i);
         for (size_t aa = 0; aa < Sequence::PROFILE_AA_SIZE; aa++) {
             printf(" %.4f", profile[i * Sequence::PROFILE_AA_SIZE + aa]);
         }
-        printf(" %7d %7d %7d\n", gDelFwd[i] & 0xF, gDelFwd[i] >> 4, gIns[i]);
+        printf(" %7d %7d %7d %7d %7d\n", gDelFwd[i] & 0xF, gDelFwd[i] >> 4, gDelRev[iMax-i] & 0xF, gDelRev[iMax-i] >> 4, gIns[i]);
     }
 }
 
