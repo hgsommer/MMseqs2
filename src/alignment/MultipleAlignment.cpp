@@ -151,7 +151,7 @@ void MultipleAlignment::updateGapsInSequenceSet(char **msaSequence, size_t cente
             }else{
                 // D state in target Sequence
                 if(bt.at(alnPos) == 'D'){
-                    while(bt.at(alnPos) == 'D' &&  alnPos < bt.size() ){
+                    while (alnPos < bt.size() && bt.at(alnPos) == 'D') {
                         if(noDeletionMSA == false) {
                             edgeSeqMSA[bufferPos] = subMat->num2aa[edgeSeq->numSequence[targetPos]];
                             bufferPos++;
