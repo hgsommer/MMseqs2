@@ -524,17 +524,10 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
                 }
             }
         }
-        float gDelOpenFwd = -gapG * MathUtil::flog2(gapWeightDelOpen / (seqWeightSumPrev + pseudoCounts)) + 0.5;
-        float gDelCloseFwd = -gapG * MathUtil::flog2(gapWeightDelClose / (1 - seqWeightSumPrev + pseudoCounts)) + 0.5;
-        float gDelOpenRev = -gapG * MathUtil::flog2(gapWeightDelClose / (seqWeightSum + pseudoCounts)) + 0.5;
-        float gDelCloseRev = -gapG * MathUtil::flog2(gapWeightDelOpen / (1 - seqWeightSum + pseudoCounts)) + 0.5;
-        //printf("i: %lu fo: %f fc: %f ro: %f rc: %f\n", pos, gDelOpenFwd, gDelCloseFwd, gDelOpenRev, gDelCloseRev);
-        if (std::abs(gDelOpenFwd - gDelCloseRev) < 0.5) {
-            gDelCloseRev = gDelOpenFwd;
-        }
-        if (std::abs(gDelCloseFwd - gDelOpenRev) < 0.5) {
-            gDelOpenRev = gDelCloseFwd;
-        }
+        float gDelOpenFwd = 0.5 * -gapG * MathUtil::flog2(gapWeightDelOpen / (seqWeightSumPrev + pseudoCounts)) + 0.5;
+        float gDelCloseFwd = 0.5 * -gapG * MathUtil::flog2(gapWeightDelClose / (1 - seqWeightSumPrev + pseudoCounts)) + 0.5;
+        float gDelCloseRev = gDelOpenFwd;
+        float gDelOpenRev = gDelCloseFwd;
         // TODO: warning if any of the penalties is > 15 (overflow condition)
         gDelFwd[pos] = static_cast<uint8_t>(gDelOpenFwd) | (static_cast<uint8_t>(gDelCloseFwd) << 4);
         gDelRev[k] = static_cast<uint8_t>(gDelOpenRev) | (static_cast<uint8_t>(gDelCloseRev) << 4);
