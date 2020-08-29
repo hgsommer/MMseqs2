@@ -27,8 +27,7 @@ PSSMCalculator::PSSMCalculator(SubstitutionMatrix *subMat, size_t maxSeqLength, 
     }
     wi = new float[maxSetSize];
     naa = new int[maxSeqLength + 1];
-    gDelFwd = new uint8_t[(maxSeqLength + 1)];
-    gDelRev = new uint8_t[(maxSeqLength + 1)];
+    gDel = new uint8_t[(maxSeqLength + 1)];
     gIns = new uint8_t[(maxSeqLength + 1)];
     gapWeightsIns.reserve(maxSeqLength + 1);
 }
@@ -47,8 +46,7 @@ PSSMCalculator::~PSSMCalculator() {
     delete [] w_contrib;
     delete [] wi;
     delete [] naa;
-    delete [] gDelFwd;
-    delete [] gDelRev;
+    delete [] gDel;
     delete [] gIns;
 }
 
@@ -96,7 +94,7 @@ PSSMCalculator::Profile PSSMCalculator::computePSSMFromMSA(size_t setSize, size_
 //    PSSMCalculator::printProfile(queryLength);
 
 //    PSSMCalculator::printPSSM(queryLength);
-    return Profile(pssm, profile, Neff_M, gDelFwd, gDelRev, gIns, consensusSequence);
+    return Profile(pssm, profile, Neff_M, gDel, gIns, consensusSequence);
 }
 
 void PSSMCalculator::printProfile(size_t queryLength) {
@@ -104,14 +102,13 @@ void PSSMCalculator::printProfile(size_t queryLength) {
     for (size_t aa = 0; aa < Sequence::PROFILE_AA_SIZE; aa++) {
         printf(" %6c", subMat->num2aa[aa]);
     }
-    printf(" gDelOFw gDelCFw gDelORv gDelCRv gInsOpn\n");
-    size_t iMax = queryLength - 1;
+    printf(" gDelOpn gDelCls gInsOpn\n");
     for (size_t i = 0; i < queryLength; i++) {
         printf("%3zu", i);
         for (size_t aa = 0; aa < Sequence::PROFILE_AA_SIZE; aa++) {
             printf(" %.4f", profile[i * Sequence::PROFILE_AA_SIZE + aa]);
         }
-        printf(" %7d %7d %7d %7d %7d\n", gDelFwd[i] & 0xF, gDelFwd[i] >> 4, gDelRev[iMax-i] & 0xF, gDelRev[iMax-i] >> 4, gIns[i]);
+        printf(" %7d %7d %7d\n", gDel[i] & 0xF, gDel[i] >> 4, gIns[i]);
     }
 }
 
@@ -505,8 +502,7 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
         }
     }
     size_t k = queryLength - 1;
-    gDelFwd[0] = 0;
-    gDelRev[0] = 0;
+    gDel[0] = 0;
     gIns[k] = 0;
     for (size_t pos = 1; pos < queryLength; ++pos) {
         float gapWeightDelOpen = gapWeightStart;
@@ -526,11 +522,8 @@ void PSSMCalculator::computeGapPenalties(size_t queryLength, size_t setSize, con
         }
         float gDelOpenFwd = 0.5 * -gapG * MathUtil::flog2(gapWeightDelOpen / (seqWeightSumPrev + pseudoCounts)) + 0.5;
         float gDelCloseFwd = 0.5 * -gapG * MathUtil::flog2(gapWeightDelClose / (1 - seqWeightSumPrev + pseudoCounts)) + 0.5;
-        float gDelCloseRev = gDelOpenFwd;
-        float gDelOpenRev = gDelCloseFwd;
         // TODO: warning if any of the penalties is > 15 (overflow condition)
-        gDelFwd[pos] = static_cast<uint8_t>(gDelOpenFwd) | (static_cast<uint8_t>(gDelCloseFwd) << 4);
-        gDelRev[k] = static_cast<uint8_t>(gDelOpenRev) | (static_cast<uint8_t>(gDelCloseRev) << 4);
+        gDel[pos] = static_cast<uint8_t>(gDelOpenFwd) | (static_cast<uint8_t>(gDelCloseFwd) << 4);
         gIns[pos - 1] = -gapG * MathUtil::flog2(gapWeightsIns[pos - 1] / (seqWeightSumPrev + pseudoCounts));
         seqWeightSumPrev = seqWeightSum;
         --k;

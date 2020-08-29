@@ -16,15 +16,12 @@ public:
         const char * pssm;
         float * prob;
         const float * neffM;
-        const uint8_t *gDelFwd;
-        const uint8_t *gDelRev;
+        const uint8_t *gDel;
         const uint8_t *gIns;
         std::string consensus;
 
-        Profile(char *pssm, float *prob, float *neffM, const uint8_t *gDelFwd, const uint8_t *gDelRev,
-                const uint8_t *gIns, std::string consensus)
-                : pssm(pssm), prob(prob), neffM(neffM), gDelFwd(gDelFwd), gDelRev(gDelRev),
-                  gIns(gIns), consensus(consensus) {
+        Profile(char *pssm, float *prob, float *neffM, const uint8_t *gDel, const uint8_t *gIns, std::string consensus)
+                : pssm(pssm), prob(prob), neffM(neffM), gDel(gDel), gIns(gIns), consensus(consensus) {
         }
     };
 
@@ -71,11 +68,8 @@ private:
     // PSSM contains log odds PSSM values
     char * pssm;
 
-    // position-specific deletion penalties (forward direction)
-    uint8_t *gDelFwd;
-
-    // position-specific deletion penalties (reverse direction)
-    uint8_t *gDelRev;
+    // position-specific deletion penalties
+    uint8_t *gDel;
 
     // position-specific gap open penalties for insertions
     uint8_t *gIns;

@@ -462,8 +462,7 @@ public:
     unsigned int    *profile_index;
     float           *profile;
     float           *neffM;
-    uint8_t         *gDelFwd;
-    uint8_t         *gDelRev;
+    uint8_t         *gDel;
     uint8_t         *gIns;
     float           *pseudocountsWeight;
     // (PROFILE_AA_SIZE / SIMD_SIZE) + 1 * SIMD_SIZE
@@ -472,11 +471,10 @@ public:
     static const size_t PROFILE_AA_SIZE = 20;
     static const size_t PROFILE_CONSENSUS = 21;
     static const size_t PROFILE_NEFF = 22;
-    static const size_t PROFILE_GAP_DEL_FWD = 23;
-    static const size_t PROFILE_GAP_DEL_REV = 24;
-    static const size_t PROFILE_GAP_INS = 25;
-    // 20 AA, 1 query, 1 consensus, 1 Neff M, 3 gap penalties
-    static const size_t PROFILE_READIN_SIZE = 26;
+    static const size_t PROFILE_GAP_DEL = 23;
+    static const size_t PROFILE_GAP_INS = 24;
+    // 20 AA, 1 query, 1 consensus, 1 Neff M, 2 gap penalties
+    static const size_t PROFILE_READIN_SIZE = 25;
     ScoreMatrix **profile_matrix;
     // Memory layout of this profile is qL * AA
     //   Query length

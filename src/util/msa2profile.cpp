@@ -389,8 +389,7 @@ int msa2profile(int argc, const char **argv, const Command &command) {
                 result.push_back(static_cast<unsigned char>(msaSequences[0][pos]));
                 result.push_back(subMat.aa2num[static_cast<int>(pssmRes.consensus[pos])]);
                 result += MathUtil::convertNeffToChar(pssmRes.neffM[pos]);
-                result.push_back(pssmRes.gDelFwd[pos]);
-                result.push_back(pssmRes.gDelRev[pos]);
+                result.push_back(pssmRes.gDel[pos]);
                 result.push_back(pssmRes.gIns[pos]);
             }
 

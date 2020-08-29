@@ -259,8 +259,7 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
                     result.push_back(static_cast<unsigned char>(subMat.aa2num[static_cast<int>(pssmRes.consensus[pos])]));
                     unsigned char neff = MathUtil::convertNeffToChar(pssmRes.neffM[pos]);
                     result.push_back(neff);
-                    result.push_back(pssmRes.gDelFwd[pos]);
-                    result.push_back(pssmRes.gDelRev[pos]);
+                    result.push_back(pssmRes.gDel[pos]);
                     result.push_back(pssmRes.gIns[pos]);
                 }
             }

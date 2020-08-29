@@ -911,14 +911,14 @@ void SmithWaterman::ssw_init(const Sequence* q,
         // insertion penalties are shifted by one position for the reverse direction (2nd to last becomes first)
         std::reverse_copy(q->gIns, q->gIns + q->L - 1, profile->gIns_rev);
 
+        for (int32_t i = 0; i < q->L; ++i) {
+            profile->gDelOpen[i] = q->gDel[i] & 0xF;
+            profile->gDelClose[i] = q->gDel[i] >> 4;
+        }
         profile->gDelClose_rev[0] = 0;
         profile->gDelOpen_rev[0] = 0;
-        for (int32_t i = 0; i < q->L; ++i) {
-            profile->gDelOpen[i] = q->gDelFwd[i] & 0xF;
-            profile->gDelClose[i] = q->gDelFwd[i] >> 4;
-            profile->gDelOpen_rev[i] = q->gDelRev[i] & 0xF;
-            profile->gDelClose_rev[i] = q->gDelRev[i] >> 4;
-        }
+        std::reverse_copy(profile->gDelOpen + 1, profile->gDelOpen + q->L, profile->gDelClose_rev + 1);
+        std::reverse_copy(profile->gDelClose + 1, profile->gDelClose + q->L, profile->gDelOpen_rev + 1);
         for (int32_t i = 0; i < alphabetSize; i++) {
             const int8_t *startToRead = profile->mat + (i * q->L);
             int8_t *startToWrite      = profile->mat_rev + (i * q->L);
